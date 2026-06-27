@@ -1,0 +1,29 @@
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER : admin
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_db: mydb
+    ports:
+      - "5432:5432"
+    volumes: -postgres_data:/var/lib/postgresql/data
+
+      
+
+  web : 
+    build: .
+    container_name: django_app
+    command: "python3 manage.py migrate"
+    depends_on:
+
+      - db
+    volumes:
+      - .:/app
+    
+volumes: "postgres_data"
+
+
+  
+
+

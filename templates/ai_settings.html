@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تنظیمات پیشرفته سیستم</title>
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Vazirmatn', 'Segoe UI', Tahoma, sans-serif;
+            background: #0f2027;
+            color: #ecf0f1;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            direction: rtl;
+        }
+        .container {
+            max-width: 1100px;
+            width: 100%;
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 35px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid rgba(212, 175, 55, 0.3);
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            font-size: 1.8rem;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .header h1 i { color: #d4af37; }
+        .back-btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #94a3b8;
+            padding: 10px 20px;
+            border-radius: 12px;
+            text-decoration: none;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: inherit;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+        .back-btn:hover { background: rgba(255,255,255,0.2); color: #fff; }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #d4af37;
+            margin: 25px 0 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid rgba(212, 175, 55, 0.15);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .info-item {
+            background: rgba(0,0,0,0.3);
+            padding: 12px 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .info-item .label { color: #94a3b8; font-size: 0.75rem; display: block; margin-bottom: 4px; }
+        .info-item .value { color: #fff; font-weight: 500; font-size: 0.9rem; }
+        .info-item .value.loading { color: #f59e0b; }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #e2e8f0;
+            font-size: 0.85rem;
+        }
+        .form-group label i { margin-left: 6px; color: #d4af37; }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        .form-control {
+            width: 100%;
+            padding: 10px 14px;
+            border: 2px solid rgba(255,255,255,0.1);
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            color: #fff;
+            font-family: inherit;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+            direction: ltr;
+        }
+        .form-control:focus {
+            outline: none;
+            border-color: #d4af37;
+            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+            background: rgba(0,0,0,0.5);
+        }
+        .form-control::placeholder { color: #64748b; }
+        .form-control:disabled { opacity: 0.5; cursor: not-allowed; }
+        .form-control.error { border-color: #ef4444; }
+
+        .status-card {
+            background: rgba(0,0,0,0.3);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .status-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .status-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .status-dot.online { background: #10b981; box-shadow: 0 0 15px rgba(16,185,129,0.4); }
+        .status-dot.offline { background: #ef4444; box-shadow: 0 0 15px rgba(239,68,68,0.4); }
+        .status-dot.checking { background: #f59e0b; animation: pulse 1s infinite; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        .btn {
+            padding: 10px 22px;
+            border: none;
+            border-radius: 10px;
+            font-family: inherit;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-gold {
+            background: linear-gradient(135deg, #d4af37, #f59e0b);
+            color: #0f2027;
+            box-shadow: 0 4px 15px rgba(212,175,55,0.3);
+            font-weight: 700;
+        }
+        .btn-gold:hover { transform: translateY(-2px); box-shadow: 0 6px 25px rgba(212,175,55,0.4); }
+        .btn-purple {
+            background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+            color: white;
+            box-shadow: 0 4px 15px rgba(139,92,246,0.3);
+        }
+        .btn-purple:hover { transform: translateY(-2px); box-shadow: 0 6px 25px rgba(139,92,246,0.4); }
+        .btn-success {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            box-shadow: 0 4px 15px rgba(16,185,129,0.3);
+        }
+        .btn-success:hover { transform: translateY(-2px); box-shadow: 0 6px 25px rgba(16,185,129,0.4); }
+        .btn-danger {
+            background: rgba(239,68,68,0.15);
+            color: #ef4444;
+            border: 1px solid rgba(239,68,68,0.3);
+        }
+        .btn-danger:hover { background: #ef4444; color: white; }
+        .btn-outline {
+            background: transparent;
+            border: 2px solid rgba(255,255,255,0.2);
+            color: #94a3b8;
+        }
+        .btn-outline:hover { background: rgba(255,255,255,0.1); color: #fff; }
+
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .model-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+            max-height: 120px;
+            overflow-y: auto;
+            padding: 8px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+        }
+        .model-tag {
+            background: rgba(255,255,255,0.08);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            color: #94a3b8;
+            border: 1px solid rgba(255,255,255,0.05);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .model-tag:hover { background: rgba(255,255,255,0.15); color: #fff; }
+        .model-tag.active {
+            background: #d4af37;
+            color: #0f2027;
+            border-color: #d4af37;
+            font-weight: 600;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            padding: 12px 20px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 500;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            z-index: 10000;
+            animation: slideUp 0.3s ease;
+            backdrop-filter: blur(10px);
+            max-width: 400px;
+        }
+        .toast-success { background: rgba(16,185,129,0.9); border-right: 4px solid #10b981; }
+        .toast-error { background: rgba(239,68,68,0.9); border-right: 4px solid #ef4444; }
+        .toast-info { background: rgba(59,130,246,0.9); border-right: 4px solid #3b82f6; }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 3px solid rgba(255,255,255,0.2);
+            border-top: 3px solid #d4af37;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .divider {
+            border: none;
+            border-top: 2px solid rgba(255,255,255,0.05);
+            margin: 25px 0;
+        }
+
+        .warning-box {
+            background: rgba(239,68,68,0.1);
+            border: 1px solid rgba(239,68,68,0.2);
+            border-radius: 10px;
+            padding: 12px 16px;
+            margin: 10px 0;
+            color: #fca5a5;
+            font-size: 0.85rem;
+        }
+        .warning-box i { margin-left: 8px; }
+
+        @media (max-width: 768px) {
+            .container { padding: 20px; }
+            .form-row { grid-template-columns: 1fr; }
+            .form-row-3 { grid-template-columns: 1fr; }
+            .info-grid { grid-template-columns: 1fr; }
+            .header { flex-direction: column; gap: 15px; text-align: center; }
+            .btn-group { flex-direction: column; }
+            .btn-group .btn { justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- هدر -->
+        <div class="header">
+            <h1><i class="ph ph-gear-six"></i> تنظیمات پیشرفته</h1>
+            <a href="/dashboard/" class="back-btn">
+                <i class="ph ph-arrow-left"></i> بازگشت به داشبورد
+            </a>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- بخش 1: اطلاعات سیستم -->
+        <!-- ============================================ -->
+        <div class="section-title"><i class="ph ph-computer"></i> اطلاعات سیستم</div>
+        <div class="info-grid" id="systemInfoGrid">
+            <div class="info-item">
+                <span class="label">نام دستگاه</span>
+                <span class="value loading" id="hostnameInfo">در حال بارگذاری...</span>
+            </div>
+            <div class="info-item">
+                <span class="label">سیستم عامل</span>
+                <span class="value loading" id="osInfo">در حال بارگذاری...</span>
+            </div>
+            <div class="info-item">
+                <span class="label">پردازنده</span>
+                <span class="value loading" id="processorInfo">در حال بارگذاری...</span>
+            </div>
+            <div class="info-item">
+                <span class="label">حافظه کل</span>
+                <span class="value loading" id="ramInfo">در حال بارگذاری...</span>
+            </div>
+            <div class="info-item">
+                <span class="label">نسخه پایتون</span>
+                <span class="value loading" id="pythonInfo">در حال بارگذاری...</span>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- بخش 2: اطلاعات شبکه (فعلی) -->
+        <!-- ============================================ -->
+        <div class="section-title"><i class="ph ph-network"></i> اطلاعات شبکه فعلی</div>
+        <div class="info-grid" id="networkInfoGrid">
+            <div class="info-item">
+                <span class="label">IP Address</span>
+                <span class="value loading" id="currentIp">در حال بارگذاری...</span>
+            </div>
+            <div class="info-item">
+                <span class="label">Subnet Mask</span>
+                <span class="value loading" id="currentSubnet">در حال بارگذاری...</span>
+            </div>
+            <div class="info-item">
+                <span class="label">Default Gateway</span>
+                <span class="value loading" id="currentGateway">در حال بارگذاری...</span>
+            </div>
+            <div class="info-item">
+                <span class="label">Primary DNS</span>
+                <span class="value loading" id="currentDns1">در حال بارگذاری...</span>
+            </div>
+            <div class="info-item">
+                <span class="label">Secondary DNS</span>
+                <span class="value loading" id="currentDns2">در حال بارگذاری...</span>
+            </div>
+            <div class="info-item">
+                <span class="label">MAC Address</span>
+                <span class="value loading" id="currentMac">در حال بارگذاری...</span>
+            </div>
+        </div>
+
+        <!-- ============================================ -->
+        <!-- بخش 3: تنظیمات شبکه (تغییر) -->
+        <!-- ============================================ -->
+        <div class="section-title"><i class="ph ph-sliders"></i> تنظیمات شبکه</div>
+        
+        <div class="warning-box">
+            <i class="ph ph-warning"></i> 
+            <strong>توجه:</strong> تغییر تنظیمات شبکه ممکن است باعث قطع اتصال شما شود. 
+            تنها در صورتی که دقیقاً می‌دانید چه کاری انجام می‌دهید، این تنظیمات را تغییر دهید.
+        </div>
+
+        <form id="networkForm">
+            <div class="form-row">
+                <div class="form-group">
+                    <label><i class="ph ph-globe"></i> IP Address</label>
+                    <input type="text" id="ipInput" class="form-control" placeholder="مثال: 192.168.1.100">
+                </div>
+                <div class="form-group">
+                    <label><i class="ph ph-grid"></i> Subnet Mask</label>
+                    <input type="text" id="subnetInput" class="form-control" placeholder="مثال: 255.255.255.0">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label><i class="ph ph-arrows-left-right"></i> Default Gateway</label>
+                    <input type="text" id="gatewayInput" class="form-control" placeholder="مثال: 192.168.1.1">
+                </div>
+                <div class="form-group">
+                    <label><i class="ph ph-database"></i> Primary DNS</label>
+                    <input type="text" id="dns1Input" class="form-control" placeholder="مثال: 8.8.8.8">
+                </div>
+            </div>
+            <div class="form-group">
+                <label><i class="ph ph-database"></i> Secondary DNS</label>
+                <input type="text" id="dns2Input" class="form-control" placeholder="مثال: 8.8.4.4">
+            </div>
+
+            <div class="btn-group">
+                <button type="submit" class="btn btn-gold" id="saveNetworkBtn">
+                    <i class="ph ph-floppy-disk"></i> ذخیره تنظیمات شبکه
+                </button>
+                <button type="button" class="btn btn-success" onclick="applyNetworkSettings()">
+                    <i class="ph ph-play-circle"></i> اعمال تنظیمات (ویندوز)
+                </button>
+                <button type="button" class="btn btn-outline" onclick="loadNetworkInfo()">
+                    <i class="ph ph-arrows-clockwise"></i> بارگذاری مجدد
+                </button>
+            </div>
+        </form>
+
+        <hr class="divider">
+
+        <!-- ============================================ -->
+        <!-- بخش 4: تنظیمات هوش مصنوعی -->
+        <!-- ============================================ -->
+        <div class="section-title"><i class="ph ph-robot"></i> تنظیمات هوش مصنوعی</div>
+
+        <div class="status-card">
+            <div class="status-row">
+                <div class="status-indicator">
+                    <span class="status-dot" id="statusDot"></span>
+                    <div>
+                        <div class="status-text" id="statusText">در حال بررسی...</div>
+                        <div class="status-detail" id="statusDetail"></div>
+                    </div>
+                </div>
+                <button class="btn btn-outline" onclick="testConnection()">
+                    <i class="ph ph-arrows-clockwise"></i> تست مجدد
+                </button>
+            </div>
+            <div id="modelsContainer" class="model-list" style="margin-top: 12px;"></div>
+        </div>
+
+        <form id="aiForm">
+            <div class="form-row">
+                <div class="form-group">
+                    <label><i class="ph ph-network"></i> آدرس Host (IP)</label>
+                    <input type="text" id="hostInput" class="form-control" value="{{ ai_settings.ollama_host }}" placeholder="localhost" required>
+                </div>
+                <div class="form-group">
+                    <label><i class="ph ph-plug"></i> پورت</label>
+                    <input type="number" id="portInput" class="form-control" value="{{ ai_settings.ollama_port }}" placeholder="11434" min="1" max="65535" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label><i class="ph ph-brain"></i> مدل هوش مصنوعی</label>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <input type="text" id="modelInput" class="form-control" value="{{ ai_settings.ollama_model }}" placeholder="نام مدل" style="flex: 1; min-width: 200px;" required>
+                    <button type="button" class="btn btn-outline" onclick="refreshModels()" style="width: auto;">
+                        <i class="ph ph-arrow-clockwise"></i> بروزرسانی
+                    </button>
+                </div>
+                <div id="modelListContainer" class="model-list"></div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label><i class="ph ph-clock"></i> زمان انتظار (ثانیه)</label>
+                    <input type="number" id="timeoutInput" class="form-control" value="{{ ai_settings.timeout_seconds }}" placeholder="120" min="1" required>
+                </div>
+                <div class="form-group">
+                    <label><i class="ph ph-thermometer"></i> دمای خلاقیت</label>
+                    <input type="number" id="temperatureInput" class="form-control" value="{{ ai_settings.temperature }}" step="0.1" min="0" max="2" placeholder="0.3" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label><i class="ph ph-toggle-right"></i> وضعیت سرویس</label>
+                <select id="activeInput" class="form-control">
+                    <option value="true" {% if ai_settings.is_active %}selected{% endif %}>فعال</option>
+                    <option value="false" {% if not ai_settings.is_active %}selected{% endif %}>غیرفعال</option>
+                </select>
+            </div>
+
+            <div class="btn-group">
+                <button type="submit" class="btn btn-gold" id="saveAiBtn">
+                    <i class="ph ph-floppy-disk"></i> ذخیره تنظیمات AI
+                </button>
+                <button type="button" class="btn btn-success" onclick="testConnection()">
+                    <i class="ph ph-check-circle"></i> تست اتصال
+                </button>
+                <button type="button" class="btn btn-danger" onclick="restartOllama()">
+                    <i class="ph ph-power"></i> ریستارت سرویس
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        // ============================================
+        // CSRF Token
+        // ============================================
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        const csrftoken = getCookie('csrftoken');
+
+        // ============================================
+        // Toast
+        // ============================================
+        function showToast(message, type = 'info') {
+            const existing = document.querySelector('.toast');
+            if (existing) existing.remove();
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.innerHTML = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 5000);
+        }
+
+        // ============================================
+        // بارگذاری اطلاعات سیستم و شبکه
+        // ============================================
+        async function loadNetworkInfo() {
+            try {
+                const response = await fetch('/api/network/info/');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const info = data.network_info;
+                    
+                    // اطلاعات سیستم
+                    document.getElementById('hostnameInfo').textContent = info.hostname || 'نامشخص';
+                    document.getElementById('hostnameInfo').className = 'value';
+                    
+                    const osText = (info.os || '') + ' ' + (info.os_release || '');
+                    document.getElementById('osInfo').textContent = osText.trim() || info.os_version || 'نامشخص';
+                    document.getElementById('osInfo').className = 'value';
+                    
+                    document.getElementById('processorInfo').textContent = info.processor || 'نامشخص';
+                    document.getElementById('processorInfo').className = 'value';
+                    
+                    document.getElementById('ramInfo').textContent = info.ram_total || 'نامشخص';
+                    document.getElementById('ramInfo').className = 'value';
+                    
+                    document.getElementById('pythonInfo').textContent = info.python_version || 'نامشخص';
+                    document.getElementById('pythonInfo').className = 'value';
+                    
+                    // اطلاعات شبکه فعلی
+                    document.getElementById('currentIp').textContent = info.ip_address || 'نامشخص';
+                    document.getElementById('currentIp').className = 'value';
+                    
+                    document.getElementById('currentSubnet').textContent = info.subnet_mask || 'نامشخص';
+                    document.getElementById('currentSubnet').className = 'value';
+                    
+                    document.getElementById('currentGateway').textContent = info.default_gateway || 'نامشخص';
+                    document.getElementById('currentGateway').className = 'value';
+                    
+                    document.getElementById('currentDns1').textContent = info.primary_dns || 'نامشخص';
+                    document.getElementById('currentDns1').className = 'value';
+                    
+                    document.getElementById('currentDns2').textContent = info.secondary_dns || 'نامشخص';
+                    document.getElementById('currentDns2').className = 'value';
+                    
+                    document.getElementById('currentMac').textContent = info.mac_address || 'نامشخص';
+                    document.getElementById('currentMac').className = 'value';
+                    
+                    // پر کردن فرم با مقادیر فعلی
+                    if (info.ip_address && info.ip_address != 'نامشخص') {
+                        document.getElementById('ipInput').value = info.ip_address;
+                    }
+                    if (info.subnet_mask && info.subnet_mask != 'نامشخص') {
+                        document.getElementById('subnetInput').value = info.subnet_mask;
+                    }
+                    if (info.default_gateway && info.default_gateway != 'نامشخص') {
+                        document.getElementById('gatewayInput').value = info.default_gateway;
+                    }
+                    if (info.primary_dns && info.primary_dns != 'نامشخص') {
+                        document.getElementById('dns1Input').value = info.primary_dns;
+                    }
+                    if (info.secondary_dns && info.secondary_dns != 'نامشخص') {
+                        document.getElementById('dns2Input').value = info.secondary_dns;
+                    }
+                } else {
+                    showToast('خطا در بارگذاری اطلاعات', 'error');
+                }
+            } catch (error) {
+                console.error('Error loading network info:', error);
+                showToast('خطا در بارگذاری اطلاعات شبکه', 'error');
+            }
+        }
+
+        // ============================================
+        // ذخیره تنظیمات شبکه
+        // ============================================
+        document.getElementById('networkForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            // اعتبارسنجی ورودی‌های شبکه
+            const ip = document.getElementById('ipInput').value.trim();
+            const subnet = document.getElementById('subnetInput').value.trim();
+            
+            if (!ip) {
+                showToast('لطفاً IP Address را وارد کنید', 'error');
+                document.getElementById('ipInput').focus();
+                return;
+            }
+
+            // بررسی ساده فرمت IP
+            const ipPattern = /^(\d{1,3}\.){3}\d{1,3}$/;
+            if (!ipPattern.test(ip)) {
+                showToast('فرمت IP Address نامعتبر است', 'error');
+                document.getElementById('ipInput').focus();
+                return;
+            }
+
+            const btn = document.getElementById('saveNetworkBtn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<span class="loading-spinner"></span> در حال ذخیره...';
+            btn.disabled = true;
+
+            const data = {
+                ip_address: ip,
+                subnet_mask: document.getElementById('subnetInput').value.trim(),
+                default_gateway: document.getElementById('gatewayInput').value.trim(),
+                primary_dns: document.getElementById('dns1Input').value.trim(),
+                secondary_dns: document.getElementById('dns2Input').value.trim()
+            };
+
+            try {
+                const response = await fetch('/api/network/save/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+                showToast(result.message, result.success ? 'success' : 'error');
+            } catch (error) {
+                showToast('خطا در ذخیره تنظیمات', 'error');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        });
+
+        // ============================================
+        // اعمال تنظیمات شبکه (ویندوز)
+        // ============================================
+        async function applyNetworkSettings() {
+            if (!confirm('آیا مطمئن هستید که می‌خواهید تنظیمات شبکه را اعمال کنید؟\nاین کار ممکن است اتصال شما را قطع کند.')) return;
+
+            const data = {
+                ip_address: document.getElementById('ipInput').value,
+                subnet_mask: document.getElementById('subnetInput').value,
+                default_gateway: document.getElementById('gatewayInput').value,
+                primary_dns: document.getElementById('dns1Input').value,
+                secondary_dns: document.getElementById('dns2Input').value
+            };
+
+            try {
+                const response = await fetch('/api/network/apply/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+                showToast(result.message, result.success ? 'success' : 'error');
+                
+                if (result.success) {
+                    setTimeout(() => loadNetworkInfo(), 3000);
+                }
+            } catch (error) {
+                showToast('خطا در اعمال تنظیمات', 'error');
+            }
+        }
+
+        // ============================================
+        // تنظیمات هوش مصنوعی
+        // ============================================
+        async function testConnection() {
+            const dot = document.getElementById('statusDot');
+            const text = document.getElementById('statusText');
+            const detail = document.getElementById('statusDetail');
+
+            dot.className = 'status-dot checking';
+            text.textContent = 'در حال بررسی...';
+            detail.textContent = '';
+
+            const host = document.getElementById('hostInput').value.trim() || 'localhost';
+            const portRaw = document.getElementById('portInput').value.trim();
+            const model = document.getElementById('modelInput').value.trim() || '';
+
+            if (!portRaw) {
+                dot.className = 'status-dot offline';
+                text.textContent = '❌ پورت وارد نشده است';
+                detail.textContent = 'لطفاً پورت را وارد کنید';
+                return;
+            }
+
+            const port = parseInt(portRaw);
+            if (isNaN(port) || port < 1 || port > 65535) {
+                dot.className = 'status-dot offline';
+                text.textContent = '❌ پورت نامعتبر';
+                detail.textContent = 'پورت باید بین 1 تا 65535 باشد';
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/ai/test-connection/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify({ host, port, model })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    dot.className = 'status-dot online';
+                    text.textContent = '🟢 اتصال برقرار است';
+                    detail.textContent = data.message;
+
+                    const container = document.getElementById('modelsContainer');
+                    if (data.models && data.models.length > 0) {
+                        let html = '<strong style="font-size:0.85rem; color:#94a3b8;">📦 مدل‌های موجود:</strong><div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">';
+                        data.models.forEach(m => {
+                            const isActive = m === model;
+                            html += `<span class="model-tag ${isActive ? 'active' : ''}" onclick="document.getElementById('modelInput').value='${m}'; refreshModels();">${m}</span>`;
+                        });
+                        html += '</div>';
+                        container.innerHTML = html;
+                    }
+                } else {
+                    dot.className = 'status-dot offline';
+                    text.textContent = '🔴 اتصال برقرار نیست';
+                    detail.textContent = data.message || 'خطا در اتصال';
+                }
+            } catch (error) {
+                dot.className = 'status-dot offline';
+                text.textContent = '🔴 خطا در ارتباط';
+                detail.textContent = error.message;
+            }
+        }
+
+        async function refreshModels() {
+            const host = document.getElementById('hostInput').value.trim() || 'localhost';
+            const port = document.getElementById('portInput').value.trim() || '11434';
+            const container = document.getElementById('modelListContainer');
+
+            container.innerHTML = '<span class="loading-spinner"></span> در حال بارگذاری...';
+
+            try {
+                const response = await fetch(`/api/ai/models/?host=${host}&port=${port}`);
+                const data = await response.json();
+
+                if (data.success && data.models.length > 0) {
+                    const currentModel = document.getElementById('modelInput').value;
+                    container.innerHTML = data.models.map(m => {
+                        const isActive = m === currentModel;
+                        return `<span class="model-tag ${isActive ? 'active' : ''}" onclick="document.getElementById('modelInput').value='${m}'; refreshModels();">${m}</span>`;
+                    }).join('');
+                } else {
+                    container.innerHTML = '⚠️ مدلی یافت نشد';
+                }
+            } catch (error) {
+                container.innerHTML = '❌ خطا در بارگذاری مدل‌ها';
+            }
+        }
+
+        async function restartOllama() {
+            if (!confirm('آیا مطمئن هستید که می‌خواهید سرویس Ollama را ریستارت کنید؟')) return;
+
+            try {
+                const response = await fetch('/api/ai/restart/', {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': csrftoken }
+                });
+                const data = await response.json();
+                showToast(data.message || 'درخواست ریستارت ارسال شد', data.success ? 'success' : 'error');
+                if (data.success) setTimeout(testConnection, 3000);
+            } catch (error) {
+                showToast('خطا در ریستارت', 'error');
+            }
+        }
+
+        // ============================================
+        // ذخیره تنظیمات AI با اعتبارسنجی کامل
+        // ============================================
+        document.getElementById('aiForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            // دریافت و اعتبارسنجی ورودی‌ها
+            const host = document.getElementById('hostInput').value.trim();
+            const portRaw = document.getElementById('portInput').value.trim();
+            const model = document.getElementById('modelInput').value.trim();
+            const timeoutRaw = document.getElementById('timeoutInput').value.trim();
+            const temperatureRaw = document.getElementById('temperatureInput').value.trim();
+
+            // بررسی خالی نبودن
+            if (!host) {
+                showToast('لطفاً آدرس Host را وارد کنید', 'error');
+                document.getElementById('hostInput').focus();
+                return;
+            }
+            if (!portRaw) {
+                showToast('لطفاً پورت را وارد کنید', 'error');
+                document.getElementById('portInput').focus();
+                return;
+            }
+            if (!model) {
+                showToast('لطفاً نام مدل را وارد کنید', 'error');
+                document.getElementById('modelInput').focus();
+                return;
+            }
+            if (!timeoutRaw) {
+                showToast('لطفاً زمان انتظار را وارد کنید', 'error');
+                document.getElementById('timeoutInput').focus();
+                return;
+            }
+            if (!temperatureRaw) {
+                showToast('لطفاً دمای خلاقیت را وارد کنید', 'error');
+                document.getElementById('temperatureInput').focus();
+                return;
+            }
+
+            // تبدیل به عدد با بررسی اعتبار
+            const port = parseInt(portRaw);
+            const timeout = parseInt(timeoutRaw);
+            const temperature = parseFloat(temperatureRaw);
+
+            if (isNaN(port) || port < 1 || port > 65535) {
+                showToast('پورت باید عددی بین 1 تا 65535 باشد', 'error');
+                document.getElementById('portInput').focus();
+                return;
+            }
+            if (isNaN(timeout) || timeout < 1) {
+                showToast('زمان انتظار باید عددی بزرگتر از 0 باشد', 'error');
+                document.getElementById('timeoutInput').focus();
+                return;
+            }
+            if (isNaN(temperature) || temperature < 0 || temperature > 2) {
+                showToast('دمای خلاقیت باید عددی بین 0 تا 2 باشد', 'error');
+                document.getElementById('temperatureInput').focus();
+                return;
+            }
+
+            const btn = document.getElementById('saveAiBtn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<span class="loading-spinner"></span> در حال ذخیره...';
+            btn.disabled = true;
+
+            const data = {
+                host: host,
+                port: port,
+                model: model,
+                timeout: timeout,
+                temperature: temperature,
+                is_active: document.getElementById('activeInput').value === 'true'
+            };
+
+            try {
+                const response = await fetch('/api/ai/save-settings/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+                showToast(result.message, result.success ? 'success' : 'error');
+
+                if (result.success) {
+                    await testConnection();
+                }
+            } catch (error) {
+                showToast('خطا در ذخیره تنظیمات: ' + error.message, 'error');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        });
+
+        // ============================================
+        // بارگذاری اولیه
+        // ============================================
+        window.onload = function() {
+            loadNetworkInfo();
+            setTimeout(testConnection, 500);
+            setTimeout(refreshModels, 800);
+        };
+    </script>
+</body>
+</html>

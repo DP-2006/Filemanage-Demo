@@ -1,0 +1,1376 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مدیریت فایل حرفه‌ای</title>
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <meta name="csrf-token" content="{{ csrf_token }}">
+
+    <style>
+        :root {
+            --primary-color: #00d2ff;
+            --primary-hover: #00b8e6;
+            --gold-accent: #d4af37;
+            --bg-body: #0f2027;
+            --bg-sidebar: rgba(255, 255, 255, 0.05);
+            --bg-card: rgba(255, 255, 255, 0.08);
+            --text-main: #ecf0f1;
+            --text-muted: #94a3b8;
+            --text-sidebar: #e2e8f0;
+            --border-color: rgba(255, 255, 255, 0.15);
+            --danger-color: #ef4444;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            
+            --font-size: {{ settings.font_size }}px;
+            --menu-width: {{ settings.menu_size }}px;
+            --btn-height: {{ settings.button_size }}px;
+            
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
+        }
+
+        * { box-sizing: border-box; outline: none; }
+        
+        body {
+            margin: 0;
+            font-family: 'Vazirmatn', 'Segoe UI', Tahoma, sans-serif;
+            background-image: url('https://sfile.chatglm.cn/images-ppt/c97d61e342cb.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            color: var(--text-main);
+            font-size: var(--font-size);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            direction: rtl;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 32, 39, 0.85);
+            z-index: -1;
+        }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.4); }
+
+        .sidebar {
+            width: var(--menu-width);
+            background-color: var(--bg-sidebar);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-left: 1px solid var(--border-color);
+            color: var(--text-sidebar);
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            box-shadow: -4px 0 15px rgba(0,0,0,0.2);
+            z-index: 20;
+            transition: width 0.3s ease;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+
+        .sidebar-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+        }
+
+        .app-logo { font-size: 1.5em; color: var(--gold-accent); }
+        .app-title { font-weight: 700; font-size: 1.1em; letter-spacing: 0.5px; color: #fff; }
+
+        .nav-group { margin-bottom: 25px; }
+        .nav-label {
+            font-size: 0.75em;
+            text-transform: uppercase;
+            color: var(--gold-accent);
+            margin-bottom: 12px;
+            font-weight: bold;
+            display: block;
+            text-shadow: 0 0 5px rgba(212, 175, 55, 0.5);
+        }
+
+        .btn {
+            width: 100%;
+            height: var(--btn-height);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 0 16px;
+            border: none;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: 500;
+            transition: var(--transition);
+            margin-bottom: 10px;
+            font-size: 0.9em;
+            text-decoration: none;
+        }
+
+        .btn i { font-size: 1.2em; }
+
+        .btn-primary { 
+            background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%); 
+            color: white; 
+            box-shadow: 0 4px 12px rgba(0, 210, 255, 0.3); 
+            border: 1px solid rgba(0, 210, 255, 0.2);
+        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(0, 210, 255, 0.5); }
+
+        .btn-danger { background-color: rgba(239, 68, 68, 0.1); color: var(--danger-color); border: 1px solid rgba(239, 68, 68, 0.3); }
+        .btn-danger:hover { background-color: var(--danger-color); color: white; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4); }
+
+        .btn-success { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); }
+        .btn-success:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(16, 185, 129, 0.5); }
+
+        .btn-outline { background-color: transparent; border: 1px solid rgba(255,255,255,0.2); color: var(--text-sidebar); }
+        .btn-outline:hover { background-color: rgba(255,255,255,0.1); border-color: var(--gold-accent); color: #fff; }
+
+        .btn-ai-settings {
+            background: linear-gradient(135deg, #d4af37 0%, #f59e0b 100%);
+            color: #1a1a2e;
+            box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            font-weight: 700;
+        }
+        .btn-ai-settings:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(212, 175, 55, 0.5); color: #0f2027; }
+
+        .btn-gold {
+            background: linear-gradient(135deg, #d4af37 0%, #b8860b 100%);
+            color: #1a1a2e;
+            box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            font-weight: 700;
+        }
+        .btn-gold:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(212, 175, 55, 0.5); }
+
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; box-shadow: none; }
+
+        .slider-group { background: rgba(0, 0, 0, 0.2); padding: 15px; border-radius: var(--radius-md); margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.05); }
+        .slider-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.85em; }
+        input[type="range"] {
+            width: 100%;
+            -webkit-appearance: none;
+            height: 6px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--gold-accent);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+        }
+        input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+        .sidebar-footer { margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px; }
+
+        .notification-badge {
+            position: relative;
+            display: inline-block;
+        }
+        .notification-badge .badge-count {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #ef4444;
+            color: white;
+            border-radius: 50%;
+            padding: 2px 8px;
+            font-size: 11px;
+            font-weight: bold;
+            min-width: 20px;
+            text-align: center;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 30px;
+            overflow-y: auto;
+            gap: 30px;
+        }
+
+        .top-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .page-title h1 { margin: 0; font-size: 1.8em; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+        .page-title p { margin: 5px 0 0; color: var(--text-muted); font-size: 0.9em; }
+        
+        .header-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .stats-badge {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+            font-size: 0.9em;
+            color: var(--gold-accent);
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .upload-section {
+            background: var(--bg-card);
+            backdrop-filter: blur(15px);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 25px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .drop-zone {
+            border: 2px dashed rgba(255,255,255,0.2);
+            border-radius: var(--radius-md);
+            padding: 40px;
+            text-align: center;
+            transition: var(--transition);
+            background: rgba(0,0,0,0.2);
+            cursor: pointer;
+        }
+
+        .drop-zone:hover, .drop-zone.drag-over {
+            border-color: var(--gold-accent);
+            background: rgba(212, 175, 55, 0.05);
+        }
+
+        .drop-icon { font-size: 3em; color: var(--gold-accent); margin-bottom: 15px; display: block; }
+        .drop-text { color: var(--text-muted); margin-bottom: 20px; }
+        .drop-text strong { color: var(--primary-color); }
+
+        .staged-files-container { margin-top: 20px; display: none; }
+        .staged-files-container.active { display: block; }
+        
+        .staged-list {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding: 10px 0;
+            margin-bottom: 10px;
+        }
+
+        .staged-item {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 8px 12px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85em;
+            min-width: 150px;
+            white-space: nowrap;
+        }
+        
+        .staged-item span { overflow: hidden; text-overflow: ellipsis; max-width: 120px; color: #fff; }
+        .remove-staged { color: var(--danger-color); cursor: pointer; font-weight: bold; }
+
+        .files-section {
+            background: var(--bg-card);
+            backdrop-filter: blur(15px);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 25px;
+            box-shadow: var(--shadow-md);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .section-title { font-size: 1.2em; font-weight: bold; display: flex; align-items: center; gap: 10px; color: #fff; }
+        .section-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+        .file-grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 20px;
+            overflow-y: auto;
+            padding-bottom: 20px;
+        }
+
+        .file-card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: var(--radius-md);
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+            height: 180px;
+            justify-content: space-between;
+        }
+
+        .file-card:hover {
+            transform: translateY(-5px);
+            background: rgba(255,255,255,0.1);
+            border-color: var(--gold-accent);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        }
+
+        .file-preview { font-size: 3.5em; color: var(--primary-color); margin-top: 10px; }
+        .file-meta { width: 100%; }
+        .file-name {
+            font-size: 0.9em;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 5px;
+            color: #fff;
+        }
+        .file-date { font-size: 0.75em; color: var(--text-muted); }
+
+        .file-actions {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            opacity: 0;
+            transition: 0.2s;
+            display: flex;
+            gap: 5px;
+        }
+        .file-card:hover .file-actions { opacity: 1; }
+        .action-icon {
+            cursor: pointer;
+            font-size: 1.1em;
+            padding: 4px;
+            background: rgba(0,0,0,0.5);
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            color: #fff;
+            transition: 0.2s;
+        }
+        .action-icon.download { color: var(--primary-color); }
+        .action-icon.download:hover { color: #fff; background: var(--primary-color); }
+        .action-icon.analyze { color: var(--gold-accent); }
+        .action-icon.analyze:hover { color: #fff; background: var(--gold-accent); }
+        .action-icon.delete { color: var(--danger-color); }
+        .action-icon.delete:hover { color: #fff; background: var(--danger-color); }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(5px);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .modal-overlay.open { display: flex; opacity: 1; }
+
+        .modal-box {
+            background: rgba(30, 41, 59, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--gold-accent);
+            padding: 30px;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+            transform: scale(0.9);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.open .modal-box { transform: scale(1); }
+
+        .modal-header { font-size: 1.3em; font-weight: bold; margin-bottom: 20px; color: #fff; text-align: center; }
+        .modal-body label { color: var(--text-muted); display: block; margin-bottom: 8px; font-size: 0.9em; }
+        .modal-body input, .modal-body select, .modal-body textarea {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            font-family: inherit;
+            color: #fff;
+        }
+        .modal-body textarea { min-height: 100px; resize: vertical; }
+        .modal-body select option { background: #1e293b; }
+        .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 15px; }
+
+        .analysis-result {
+            background: rgba(0,0,0,0.3);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 0.9em;
+            line-height: 1.8;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .toast-container {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            z-index: 200;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .toast {
+            background: rgba(30, 41, 59, 0.95);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 250px;
+            animation: slideIn 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+        .toast.success { border-right: 4px solid var(--success-color); }
+        .toast.error { border-right: 4px solid var(--danger-color); }
+        .toast.info { border-right: 4px solid var(--primary-color); }
+        .toast.warning { border-right: 4px solid var(--warning-color); }
+
+        @keyframes slideIn {
+            from { transform: translateX(-20px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @media (max-width: 768px) {
+            body { flex-direction: column; overflow: auto; height: auto; }
+            .sidebar { width: 100%; height: auto; border-bottom: 1px solid rgba(255,255,255,0.1); flex-shrink: 0; }
+            .main-content { padding: 15px; overflow-y: visible; }
+            .file-grid-container { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+            .sidebar-header { margin-bottom: 15px; padding-bottom: 10px; }
+            .modal-box { max-width: 95%; margin: 10px; }
+        }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <i class="ph ph-cloud-check app-logo"></i>
+            <span class="app-title">فایل منیجر پرو</span>
+            <button onclick="resetSettings()" style="margin-right: auto; background:none; border:none; color:#94a3b8; cursor:pointer;" title="بازنشانی تنظیمات">
+                <i class="ph ph-arrow-counter-clockwise" style="font-size: 1.2em;"></i>
+            </button>
+        </div>
+
+        <div class="nav-group">
+            <span class="nav-label">عملیات اصلی</span>
+            
+            <button class="btn btn-primary" onclick="document.getElementById('folderInput').click()">
+                <i class="ph ph-upload-simple"></i>
+                <span>انتخاب فایل/پوشه</span>
+            </button>
+            
+            <button class="btn btn-success" id="sendBtn" onclick="uploadFiles()" disabled>
+                <i class="ph ph-paper-plane-right"></i>
+                <span>ارسال به سرور</span>
+            </button>    
+
+            <button class="btn btn-outline" onclick="openCreateModal()">
+                <i class="ph ph-folder-plus"></i>
+                <span>ساخت جدید</span>
+            </button>
+
+            <button class="btn btn-outline" onclick="openSendModal()">
+                <i class="ph ph-user-plus"></i>
+                <span>ارسال به کاربر</span>
+            </button>
+        </div>
+
+        <div class="nav-group">
+            <span class="nav-label">هوش مصنوعی</span>
+            
+            {% if user.is_staff %}
+            <a href="/notifications/" class="btn btn-gold notification-badge" style="text-decoration: none;">
+                <i class="ph ph-bell"></i>
+                <span>نوتیفیکیشن‌ها</span>
+                <span class="badge-count" id="notificationBadge">0</span>
+            </a>
+            
+            <a href="/security-alerts/" class="btn btn-danger" style="text-decoration: none;">
+                <i class="ph ph-shield-warning"></i>
+                <span>هشدارهای امنیتی</span>
+            </a>
+            
+            <a href="/ai-settings/" class="btn btn-ai-settings" style="text-decoration: none;">
+                <i class="ph ph-robot"></i>
+                <span>تنظیمات AI</span>
+            </a>
+            {% endif %}
+        </div>
+
+        <div class="nav-group">
+            <span class="nav-label">شخصی‌سازی ظاهر</span>
+            
+            <div class="slider-group">
+                <div class="slider-header">
+                    <span>اندازه فونت</span>
+                    <span id="fontSizeVal">{{ settings.font_size }}px</span>
+                </div>
+                <input type="range" min="12" max="24" value="{{ settings.font_size }}" oninput="updateStyle('fontSize', this.value + 'px')">
+            </div>
+
+            <div class="slider-group">
+                <div class="slider-header">
+                    <span>عرض منو</span>
+                    <span id="menuWidthVal">{{ settings.menu_size }}px</span>
+                </div>
+                <input type="range" min="200" max="400" value="{{ settings.menu_size }}" oninput="updateStyle('menuWidth', this.value + 'px')">
+            </div>
+
+            <div class="slider-group">
+                <div class="slider-header">
+                    <span>ارتفاع دکمه</span>
+                    <span id="btnHeightVal">{{ settings.button_size }}px</span>
+                </div>
+                <input type="range" min="35" max="60" value="{{ settings.button_size }}" oninput="updateStyle('btnHeight', this.value + 'px')">
+            </div>
+        </div>
+
+        <div class="sidebar-footer">
+            {% if user.is_staff %}
+            <a href="/admin-panel/" class="btn btn-danger" style="text-decoration:none; margin-bottom: 10px;">
+                <i class="ph ph-shield-check"></i>
+                <span>پنل مدیریت</span>
+            </a>
+            {% endif %}
+            
+            <button class="btn btn-outline" onclick="window.location.href='/logout/'" style="border-color: rgba(239, 68, 68, 0.5); color: #fca5a5;">
+                <i class="ph ph-sign-out"></i>
+                <span>خروج از حساب</span>
+            </button>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <header class="top-header">
+            <div class="page-title">
+                <h1>داشبورد فایل</h1>
+                <p id="currentPath">مسیر: هیچ پوشه‌ای انتخاب نشده</p>
+            </div>
+            <div class="header-actions">
+                <div class="stats-badge">
+                    <i class="ph ph-files"></i>
+                    <span id="fileCount">0 فایل آماده ارسال</span>
+                </div>
+                {% if user.is_staff %}
+                <div class="stats-badge" style="border-color: rgba(239, 68, 68, 0.3);">
+                    <i class="ph ph-shield-warning"></i>
+                    <span id="alertCount">0 هشدار</span>
+                </div>
+                {% endif %}
+            </div>
+        </header>
+
+        <section class="upload-section">
+            <div class="drop-zone" id="dropZone" onclick="document.getElementById('folderInput').click()">
+                <i class="ph ph-cloud-arrow-up drop-icon"></i>
+                <h3 class="drop-text">فایل‌ها را اینجا بکشید یا <strong>کلیک کنید</strong></h3>
+                <p style="font-size: 0.8em; color: #94a3b8;">پشتیبانی از فایل‌های تکی و پوشه‌های متعدد</p>
+            </div>
+            
+            <div class="staged-files-container" id="stagedContainer">
+                <div class="staged-list" id="stagedList"></div>
+            </div>
+        </section>
+
+        <section class="files-section">
+            <div class="section-header">
+                <div class="section-title">
+                    <i class="ph ph-hard-drives" style="color: var(--primary-color);"></i>
+                    <span>فایل‌های من (Drive)</span>
+                </div>
+                <div class="section-actions">
+                    <button class="btn btn-outline" style="width: auto; padding: 5px 15px; margin: 0;" onclick="refreshFiles()">
+                        <i class="ph ph-arrows-clockwise"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="file-grid-container" id="dbFileList">
+                {% for file in my_files %}
+                <div class="file-card" data-file-id="{{ file.id }}" data-file-name="{{ file.file.name }}">
+                    <div class="file-actions">
+                        <i class="ph ph-download-simple action-icon download" onclick="event.stopPropagation(); downloadFile('{{ file.file.url }}')" title="دانلود"></i>
+                        {% if user.is_staff %}
+                        <i class="ph ph-robot action-icon analyze" onclick="event.stopPropagation(); analyzeFile({{ file.id }})" title="تحلیل با AI"></i>
+                        {% endif %}
+                        <i class="ph ph-trash action-icon delete" onclick="event.stopPropagation(); deleteFile({{ file.id }})" title="حذف"></i>
+                    </div>
+                    <div class="file-preview">
+                        {% if '.png' in file.file.name or '.jpg' in file.file.name or '.jpeg' in file.file.name or '.webp' in file.file.name %}
+                            <i class="ph ph-image"></i>
+                        {% elif '.pdf' in file.file.name %}
+                            <i class="ph ph-file-pdf" style="color: #ef4444;"></i>
+                        {% elif '.mp4' in file.file.name or '.avi' in file.file.name %}
+                            <i class="ph ph-film-strip" style="color: #8b5cf6;"></i>
+                        {% elif '.zip' in file.file.name or '.rar' in file.file.name or '.7z' in file.file.name %}
+                            <i class="ph ph-file-zip" style="color: #f59e0b;"></i>
+                        {% elif '.doc' in file.file.name or '.docx' in file.file.name %}
+                            <i class="ph ph-file-doc" style="color: #3b82f6;"></i>
+                        {% elif '.xls' in file.file.name or '.xlsx' in file.file.name %}
+                            <i class="ph ph-file-xls" style="color: #10b981;"></i>
+                        {% elif '.pptx' in file.file.name or '.ppt' in file.file.name %}
+                            <i class="ph ph-file-ppt" style="color: #f97316;"></i>
+                        {% else %}
+                            <i class="ph ph-file-text"></i>
+                        {% endif %}
+                    </div>
+                    <div class="file-meta">
+                        <div class="file-name" title="{{ file.file.name }}">{{ file.file.name|truncatechars:20 }}</div>
+                        <div class="file-date">{{ file.uploaded_at|date:"y/m/d - H:i" }}</div>
+                    </div>
+                </div>
+                {% empty %}
+                <div style="grid-column: 1/-1; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 200px; color: #94a3b8;">
+                    <i class="ph ph-folder-dashed" style="font-size: 3em; margin-bottom: 10px;"></i>
+                    <p>هنوز فایلی آپلود نکرده‌اید</p>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+    </main>
+
+    <input type="file" id="folderInput" class="hidden-input" webkitdirectory directory multiple onchange="handleFiles(this.files)" style="display: none;">
+
+    <div id="sendModal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-header">📤 ارسال فایل به کاربر</div>
+            <div class="modal-body">
+                <label>کاربر مقصد</label>
+                <select id="recipientUser"></select>
+                
+                <label>فایل‌های انتخاب شده (<span id="modalSelectedCount">0</span>)</label>
+                <div id="selectedFilesList" style="background:rgba(0,0,0,0.3); padding:10px; border-radius:8px; max-height:100px; overflow-y:auto; font-size:0.85em; color:#94a3b8; border:1px solid rgba(255,255,255,0.1);">
+                    هیچ فایلی انتخاب نشده است
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-outline" style="color: #fff; border-color: rgba(255,255,255,0.2); width: auto;" onclick="closeSendModal()">لغو</button>
+                <button class="btn btn-primary" style="width: auto;" id="modalSendBtn" onclick="sendFiles()">ارسال</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="createModal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-header">📁 ساخت جدید</div>
+            <div class="modal-body">
+                <input type="text" id="newItemName" placeholder="نام فایل یا پوشه را وارد کنید...">
+                <div style="display:flex; gap:10px;">
+                    <button class="btn btn-primary" onclick="createItem('folder')">ساخت پوشه</button>
+                    <button class="btn btn-primary" onclick="createItem('file')">ساخت فایل</button>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-outline" style="color: #fff; border-color: rgba(255,255,255,0.2); width: auto;" onclick="closeCreateModal()">بستن</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="analyzeModal" class="modal-overlay">
+        <div class="modal-box" style="max-width: 700px;">
+            <div class="modal-header">🤖 تحلیل هوش مصنوعی</div>
+            <div class="modal-body">
+                <div id="analyzeFileInfo" style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; margin-bottom: 15px;">
+                    <strong>فایل:</strong> <span id="analyzeFileName">-</span>
+                </div>
+                
+                <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+                    <button class="btn btn-primary" style="width: auto; padding: 8px 20px;" onclick="getAISummary('summary')">خلاصه کوتاه</button>
+                    <button class="btn btn-info" style="width: auto; padding: 8px 20px; background: #3b82f6;" onclick="getAISummary('detailed')">خلاصه کامل</button>
+                    <button class="btn btn-success" style="width: auto; padding: 8px 20px;" onclick="getAISummary('full')">تحلیل کامل</button>
+                </div>
+                
+                <div id="aiResultArea" class="analysis-result" style="min-height: 150px;">
+                    برای شروع تحلیل، یکی از دکمه‌ها را بزنید...
+                </div>
+                
+                <hr style="border-color: rgba(255,255,255,0.1); margin: 15px 0;">
+                
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="aiQuestionInput" placeholder="سوال خود را از AI بپرسید..." style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.3); color: #fff;">
+                    <button class="btn btn-warning" style="width: auto; padding: 8px 20px; background: #f59e0b; color: #1a1a2e;" onclick="askAIQuestion()">سوال</button>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-outline" style="color: #fff; border-color: rgba(255,255,255,0.2); width: auto;" onclick="closeAnalyzeModal()">بستن</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="securityModal" class="modal-overlay">
+        <div class="modal-box" style="max-width: 600px;">
+            <div class="modal-header">🛡️ تحلیل امنیتی</div>
+            <div class="modal-body">
+                <div id="securityFileInfo" style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; margin-bottom: 15px;">
+                    <strong>فایل:</strong> <span id="securityFileName">-</span>
+                </div>
+                <div id="securityResultArea" class="analysis-result" style="min-height: 150px;">
+                    در حال بررسی امنیتی...
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 15px;">
+                    <button class="btn btn-success" style="width: auto; padding: 8px 20px;" onclick="resolveSecurityAlert('review')">✅ تأیید امنیت</button>
+                    <button class="btn btn-danger" style="width: auto; padding: 8px 20px;" onclick="resolveSecurityAlert('block')">🚫 مسدود کردن</button>
+                    <button class="btn btn-outline" style="width: auto; padding: 8px 20px;" onclick="resolveSecurityAlert('ignore')">🙈 چشم‌پوشی</button>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-outline" style="color: #fff; border-color: rgba(255,255,255,0.2); width: auto;" onclick="closeSecurityModal()">بستن</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        // ============================================================
+        // STATE
+        // ============================================================
+        let selectedFiles = [];
+        let currentFolderName = '';
+        let currentFileId = null;
+        let currentAlertId = null;
+
+        // ============================================================
+        // TOAST
+        // ============================================================
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            
+            let iconClass = 'ph-info';
+            if(type === 'success') iconClass = 'ph-check-circle';
+            if(type === 'error') iconClass = 'ph-warning-circle';
+            if(type === 'warning') iconClass = 'ph-warning';
+
+            toast.innerHTML = `<i class="ph ${iconClass}" style="font-size:1.2em;"></i> <span>${message}</span>`;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(-20px)';
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        // ============================================================
+        // COOKIE
+        // ============================================================
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // ============================================================
+        // SETTINGS
+        // ============================================================
+        function updateStyle(type, value) {
+            const root = document.documentElement;
+            if(type === 'fontSize') {
+                root.style.setProperty('--font-size', value);
+                document.getElementById('fontSizeVal').innerText = value;
+            }
+            if(type === 'menuWidth') {
+                root.style.setProperty('--menu-width', value);
+                document.getElementById('menuWidthVal').innerText = value;
+            }
+            if(type === 'btnHeight') {
+                root.style.setProperty('--btn-height', value);
+                document.getElementById('btnHeightVal').innerText = value;
+            }
+            saveSettingsToServer();
+        }
+
+        async function saveSettingsToServer() {
+            const root = document.documentElement;
+            const style = getComputedStyle(root);
+            const fs = parseInt(style.getPropertyValue('--font-size')) || 14;
+            const ms = parseInt(style.getPropertyValue('--menu-width')) || 280;
+            const bs = parseInt(style.getPropertyValue('--btn-height')) || 45;
+
+            try {
+                await fetch('/api/settings/', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')},
+                    body: JSON.stringify({font_size: fs, menu_size: ms, button_size: bs})
+                });
+            } catch (e) { console.error("Settings save failed", e); }
+        }
+
+        function resetSettings() {
+            if(confirm('آیا مطمئن هستید که می‌خواهید تنظیمات را به حالت اول بازگردانید؟')) {
+                updateStyle('fontSize', '14px');
+                updateStyle('menuWidth', '280px');
+                updateStyle('btnHeight', '45px');
+                
+                document.querySelectorAll('input[type="range"]').forEach(input => {
+                   if(input.getAttribute('oninput').includes('fontSize')) input.value = 14;
+                   if(input.getAttribute('oninput').includes('menuWidth')) input.value = 280;
+                   if(input.getAttribute('oninput').includes('btnHeight')) input.value = 45;
+                });
+                showToast('تنظیمات بازنشانی شد', 'info');
+            }
+        }
+
+        // ============================================================
+        // FILE HANDLING
+        // ============================================================
+        function handleFiles(files) {
+            if (!files.length) return;
+            
+            const firstFile = files[0];
+            if (firstFile.webkitRelativePath) {
+                const pathParts = firstFile.webkitRelativePath.split('/');
+                currentFolderName = pathParts[0];
+                document.getElementById('currentPath').textContent = `پوشه انتخاب شده: ${currentFolderName}`;
+            } else {
+                currentFolderName = 'انتخاب دستی';
+                document.getElementById('currentPath').textContent = `فایل‌های انتخاب شده: ${files.length} عدد`;
+            }
+
+            Array.from(files).forEach(file => {
+                if (file.name.toLowerCase().endsWith('.exe')) {
+                    showToast(`فایل ${file.name} مجاز نیست.`, 'error');
+                    return;
+                }
+                if (!selectedFiles.some(f => f.name === file.name && f.size === file.size)) {
+                    selectedFiles.push(file);
+                }
+            });
+
+            renderStagedFiles();
+            updateUI();
+        }
+
+        function renderStagedFiles() {
+            const container = document.getElementById('stagedContainer');
+            const list = document.getElementById('stagedList');
+            
+            list.innerHTML = '';
+            
+            if (selectedFiles.length > 0) {
+                container.classList.add('active');
+                selectedFiles.forEach((file, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'staged-item';
+                    
+                    let iconClass = 'ph-file';
+                    if(file.type.startsWith('image/')) iconClass = 'ph-image';
+                    else if(file.type.startsWith('video/')) iconClass = 'ph-film-strip';
+
+                    div.innerHTML = `
+                        <i class="ph ${iconClass}"></i>
+                        <span>${file.name}</span>
+                        <i class="ph ph-x remove-staged" onclick="removeFile(${index})"></i>
+                    `;
+                    list.appendChild(div);
+                });
+            } else {
+                container.classList.remove('active');
+            }
+        }
+
+        function removeFile(index) {
+            selectedFiles.splice(index, 1);
+            renderStagedFiles();
+            updateUI();
+        }
+
+        function updateUI() {
+            const count = selectedFiles.length;
+            document.getElementById('fileCount').textContent = `${count} فایل آماده ارسال`;
+            document.getElementById('sendBtn').disabled = count === 0;
+            document.getElementById('modalSelectedCount').textContent = count;
+        }
+
+        // ============================================================
+        // DRAG & DROP
+        // ============================================================
+        const dropZone = document.getElementById('dropZone');
+        
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        dropZone.addEventListener('dragover', () => dropZone.classList.add('drag-over'));
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+        dropZone.addEventListener('drop', (e) => {
+            dropZone.classList.remove('drag-over');
+            const dt = e.dataTransfer;
+            handleFiles(dt.files);
+        });
+
+        // ============================================================
+        // UPLOAD
+        // ============================================================
+        async function uploadFiles() {
+            if (selectedFiles.length === 0) return;
+            
+            const formData = new FormData();
+            selectedFiles.forEach(file => formData.append('files', file));
+            formData.append('folder_name', currentFolderName);
+
+            const btn = document.getElementById('sendBtn');
+            const originalContent = btn.innerHTML;
+            btn.innerHTML = `<i class="ph ph-spinner ph-spin"></i> در حال آپلود...`;
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/upload/', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {'X-CSRFToken': getCookie('csrftoken')}
+                });
+                const data = await res.json();
+                
+                if(data.success) {
+                    showToast(data.msg, 'success');
+                    selectedFiles = [];
+                    renderStagedFiles();
+                    updateUI();
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showToast('خطا: ' + data.msg, 'error');
+                }
+            } catch (err) {
+                showToast('خطا در برقراری ارتباط با سرور', 'error');
+            } finally {
+                btn.innerHTML = originalContent;
+                btn.disabled = false;
+            }
+        }
+
+        // ============================================================
+        // SEND TO USER
+        // ============================================================
+        function openSendModal() {
+            const modal = document.getElementById('sendModal');
+            modal.classList.add('open');
+            const usersSelect = document.getElementById('recipientUser');
+            usersSelect.innerHTML = '<option value="">در حال بارگذاری لیست کاربران...</option>';
+            
+            const listDiv = document.getElementById('selectedFilesList');
+            if(selectedFiles.length > 0) {
+                listDiv.innerHTML = selectedFiles.map(f => `<div>• ${f.name}</div>`).join('');
+            } else {
+                listDiv.innerHTML = 'هیچ فایلی انتخاب نشده است';
+            }
+            
+            fetch('/api/users/')
+                .then(response => response.json())
+                .then(users => {
+                    usersSelect.innerHTML = '';
+                    if(users.length === 0) {
+                        usersSelect.innerHTML = '<option value="">کاربری یافت نشد</option>';
+                        return;
+                    }
+                    const defaultOpt = document.createElement('option');
+                    defaultOpt.value = "";
+                    defaultOpt.textContent = "انتخاب کاربر...";
+                    usersSelect.appendChild(defaultOpt);
+
+                    users.forEach(user => {
+                        const option = document.createElement('option');
+                        option.value = user.id;
+                        option.textContent = `${user.first_name} ${user.last_name} (${user.username})`;
+                        usersSelect.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching users:', error);
+                    usersSelect.innerHTML = '<option value="">خطا در بارگذاری کاربران</option>';
+                });
+        }
+
+        function closeSendModal() {
+            document.getElementById('sendModal').classList.remove('open');
+        }
+
+        function sendFiles() {
+            const recipientId = document.getElementById('recipientUser').value;
+            if (!recipientId) return showToast('لطفاً کاربر مقصد را انتخاب کنید', 'error');
+            if (selectedFiles.length === 0) return showToast('هیچ فایلی برای ارسال وجود ندارد', 'error');
+            
+            const formData = new FormData();
+            selectedFiles.forEach(file => formData.append('files', file));
+            formData.append('recipient_id', recipientId);
+            
+            const btn = document.getElementById('modalSendBtn');
+            const originalText = btn.textContent;
+            btn.textContent = 'در حال ارسال...';
+            btn.disabled = true;
+            
+            fetch('/api/send-files/', {
+                method: 'POST',
+                body: formData,
+                headers: {'X-CSRFToken': getCookie('csrftoken')}
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(data.msg, 'success');
+                    closeSendModal();
+                    selectedFiles = [];
+                    renderStagedFiles();
+                    updateUI();
+                } else {
+                    showToast('خطا: ' + data.msg, 'error');
+                }
+            })
+            .catch(error => {
+                showToast('خطا در ارتباط با سرور', 'error');
+            })
+            .finally(() => {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            });
+        }
+
+        // ============================================================
+        // CREATE ITEM
+        // ============================================================
+        function openCreateModal() { 
+            document.getElementById('createModal').classList.add('open'); 
+            document.getElementById('newItemName').value = '';
+        }
+        function closeCreateModal() { document.getElementById('createModal').classList.remove('open'); }
+        function createItem(type) {
+            const name = document.getElementById('newItemName').value;
+            if(!name) return showToast('لطفاً نام را وارد کنید', 'warning');
+            showToast(`${type === 'folder' ? 'پوشه' : 'فایل'} "${name}" ساخته شد`, 'success');
+            closeCreateModal();
+        }
+
+        // ============================================================
+        // FILE ACTIONS
+        // ============================================================
+        function downloadFile(url) {
+            window.open(url, '_blank');
+        }
+
+        function refreshFiles() {
+            location.reload();
+        }
+
+        async function deleteFile(fileId) {
+            if(!confirm('آیا از حذف این فایل اطمینان دارید؟')) return;
+            
+            try {
+                const res = await fetch('/api/delete-my-file/', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')},
+                    body: JSON.stringify({file_id: fileId})
+                });
+                const data = await res.json();
+                if(data.success) {
+                    showToast(data.msg, 'success');
+                    const card = document.querySelector(`.file-card[data-file-id="${fileId}"]`);
+                    if(card) card.remove();
+                } else {
+                    showToast('خطا: ' + data.msg, 'error');
+                }
+            } catch(e) {
+                showToast('خطا در ارتباط با سرور', 'error');
+            }
+        }
+
+        // ============================================================
+        // AI ANALYSIS - اصلاح شده با استفاده از data.analysis
+        // ============================================================
+        function analyzeFile(fileId) {
+            const card = document.querySelector(`.file-card[data-file-id="${fileId}"]`);
+            const fileName = card ? card.dataset.fileName : 'فایل';
+            
+            currentFileId = fileId;
+            document.getElementById('analyzeFileName').textContent = fileName;
+            document.getElementById('aiResultArea').innerHTML = 'برای شروع تحلیل، یکی از دکمه‌ها را بزنید...';
+            document.getElementById('aiQuestionInput').value = '';
+            document.getElementById('analyzeModal').classList.add('open');
+        }
+
+        function closeAnalyzeModal() {
+            document.getElementById('analyzeModal').classList.remove('open');
+            currentFileId = null;
+        }
+
+        async function getAISummary(level) {
+            if (!currentFileId) return showToast('هیچ فایلی انتخاب نشده است', 'error');
+            
+            const resultDiv = document.getElementById('aiResultArea');
+            resultDiv.innerHTML = '⏳ در حال تحلیل توسط AI...';
+            
+            try {
+                const url = window.location.origin + `/api/file-analyze/${currentFileId}/`;
+                
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({action: 'summarize', level: level})
+                });
+                
+                if (!res.ok) {
+                    throw new Error('Network response was not ok: ' + res.status);
+                }
+                
+                const data = await res.json();
+                
+                if(data.success) {
+                    // ✅ اصلاح: استفاده از data.result به جای data.analysis
+                    let resultText = data.result || data.analysis || 'تحلیل انجام شد اما نتیجه‌ای بازگشت داده نشد.';
+                    
+                    let html = `<div style="color: var(--gold-accent); font-weight: bold; margin-bottom: 10px;">📄 ${data.file_name || 'فایل'}</div>`;
+                    html += `<div>${resultText.replace(/\n/g, '<br>')}</div>`;
+                    
+                    if(data.threat_status && data.threat_status.severity !== 'low') {
+                        html += `<div style="margin-top: 10px; color: #f59e0b; border: 1px solid #f59e0b; padding: 8px; border-radius: 8px;">
+                            ⚠️ هشدار امنیتی: ${data.threat_status.threat_type} (${data.threat_status.severity})
+                        </div>`;
+                    }
+                    resultDiv.innerHTML = html;
+                } else {
+                    resultDiv.innerHTML = `<div style="color: #ef4444;">❌ خطا: ${data.error || 'تحلیل ناموفق'}</div>`;
+                }
+            } catch(e) {
+                console.error('Analysis error:', e);
+                resultDiv.innerHTML = `<div style="color: #ef4444;">❌ خطا در ارتباط با سرور: ${e.message}</div>`;
+            }
+        }
+
+        async function askAIQuestion() {
+            const question = document.getElementById('aiQuestionInput').value.trim();
+            if (!question) return showToast('لطفاً سوال خود را وارد کنید', 'warning');
+            if (!currentFileId) return showToast('هیچ فایلی انتخاب نشده است', 'error');
+            
+            const resultDiv = document.getElementById('aiResultArea');
+            resultDiv.innerHTML = `⏳ در حال پاسخ به سوال: "${question}"...`;
+            
+            try {
+                const url = window.location.origin + `/api/file-analyze/${currentFileId}/`;
+                
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({action: 'ask', question: question})
+                });
+                
+                if (!res.ok) {
+                    throw new Error('Network response was not ok: ' + res.status);
+                }
+                
+                const data = await res.json();
+                
+                if(data.success) {
+                    //  :  data.result به جای data.analysis
+                    let resultText = data.result || data.analysis || 'پاسخی دریافت نشد.';
+                    
+                    resultDiv.innerHTML = `
+                        <div style="color: var(--primary-color); font-weight: bold; margin-bottom: 10px;">💬 پاسخ AI:</div>
+                        <div>${resultText.replace(/\n/g, '<br>')}</div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<div style="color: #ef4444;">❌ خطا: ${data.error || 'پاسخ ناموفق'}</div>`;
+                }
+            } catch(e) {
+                console.error('Question error:', e);
+                resultDiv.innerHTML = `<div style="color: #ef4444;">❌ خطا در ارتباط با سرور: ${e.message}</div>`;
+            }
+        }
+
+        // ============================================================
+        // NOTIFICATIONS & ALERTS
+        // ============================================================
+        function updateNotificationBadge() {
+            const url = window.location.origin + '/api/notifications/';
+            
+            fetch(url, {
+                method: 'GET',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok: ' + response.status);
+                }
+                return response.json();
+            })
+            .then(data => {
+                const badge = document.getElementById('notificationBadge');
+                if (badge) {
+                    if (data.unread_count && data.unread_count > 0) {
+                        badge.textContent = data.unread_count;
+                        badge.style.display = 'inline';
+                    } else {
+                        badge.style.display = 'none';
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching notifications:', error);
+                const badge = document.getElementById('notificationBadge');
+                if (badge) {
+                    badge.style.display = 'none';
+                }
+            });
+        }
+
+        function updateAlertCount() {
+            const url = window.location.origin + '/api/alerts-count/';
+            
+            fetch(url, {
+                method: 'GET',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok: ' + response.status);
+                }
+                return response.json();
+            })
+            .then(data => {
+                const alertBadge = document.getElementById('alertCount');
+                if (alertBadge) {
+                    if (data.count && data.count > 0) {
+                        alertBadge.textContent = `${data.count} هشدار`;
+                        alertBadge.style.color = '#ef4444';
+                    } else {
+                        alertBadge.textContent = '0 هشدار';
+                        alertBadge.style.color = '#94a3b8';
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching alerts:', error);
+                const alertBadge = document.getElementById('alertCount');
+                if (alertBadge) {
+                    alertBadge.textContent = '0 هشدار';
+                    alertBadge.style.color = '#94a3b8';
+                }
+            });
+        }
+
+        // ============================================================
+        // SECURITY MODAL
+        // ============================================================
+        function resolveSecurityAlert(action) {
+            showToast(`عملیات "${action}" با موفقیت انجام شد`, 'success');
+            closeSecurityModal();
+        }
+
+        function closeSecurityModal() {
+            document.getElementById('securityModal').classList.remove('open');
+        }
+
+        // ============================================================
+        // MODAL CLOSE ON OUTSIDE CLICK
+        // ============================================================
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal-overlay')) {
+                event.target.classList.remove('open');
+            }
+        }
+
+        // ============================================================
+        // INIT
+        // ============================================================
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                updateNotificationBadge();
+                updateAlertCount();
+            }, 500);
+            
+            setInterval(updateNotificationBadge, 30000);
+            setInterval(updateAlertCount, 30000);
+        });
+    </script>
+</body>
+</html>
