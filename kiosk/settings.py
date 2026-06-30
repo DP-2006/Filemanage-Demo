@@ -25,7 +25,9 @@ SECRET_KEY = 'django-insecure-#rwi85^$@#7&s*$8at13z3h^6ot1(p4i0*!=0#^cp3gkmik68x
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+#ALLOWED_HOSTS = []
+
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -44,7 +46,7 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',#django.db.utils.OperationalError: connection to server at "localhost" (::1), port 5433 failed: FATAL:  password authentication failed for user "admin"
+    #'django.middleware.csrf.CsrfViewMiddleware',#django.db.utils.OperationalError: connection to server at "localhost" (::1), port 5433 failed: FATAL:  password authentication failed for user "admin"
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -141,9 +143,24 @@ STATIC_ROOT = os.path.join(BASE_DIR , 'staticfiles')
 
 DEFAULT_UTO_FIELD = 'django.db.models.BigAutoField'
 
-ALLOWED_HOSTS = ['*']
 
+CSRF_COOKIE_SECURE = False
 
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 10000
 DATA_UPLOAD_MAX_NUMBER_FILES = 100
 
+
+
+
+
+
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost',
+    'http://127.0.0.1',
+    'http://192.168.1.100',
+    'http://192.168.1.110',
+    'http://10.135.0.129',
+]
+
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 10000
+DATA_UPLOAD_MAX_NUMBER_FILES = 100

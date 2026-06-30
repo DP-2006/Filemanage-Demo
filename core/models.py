@@ -100,54 +100,6 @@ class UploadedFile(models.Model):
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # core/models.py - به‌روزرسانی FileActionLog
 
 class FileActionLog(models.Model):
@@ -180,44 +132,6 @@ class FileActionLog(models.Model):
     
     def __str__(self):
         return f"{self.user} - {self.action} - {self.file_name}"
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 class File(models.Model):
@@ -307,7 +221,6 @@ class AIThreatAlert(models.Model):
 # اضافه کنید به انتهای core/models.py
 
 class SystemPermission(models.Model):
-    """مدل دسترسی‌های سیستمی"""
     name = models.CharField(max_length=100, unique=True)
     code = models.CharField(max_length=50, unique=True)
     description = models.TextField(blank=True)
@@ -321,7 +234,6 @@ class SystemPermission(models.Model):
 
 
 class UserPermission(models.Model):
-    """دسترسی‌های مستقیم کاربر (جدا از گروه)"""
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='custom_permissions')
     permission = models.ForeignKey(SystemPermission, on_delete=models.CASCADE)
     granted_at = models.DateTimeField(auto_now_add=True)
@@ -332,9 +244,6 @@ class UserPermission(models.Model):
     
     def __str__(self):
         return f"{self.user.username} - {self.permission.name}"
-
-
-
 
 
 class AISettings(models.Model):
@@ -490,10 +399,36 @@ class AINotification(models.Model):
         return notification
 
 
-
-
-
-
+class UserActivity(models.Model):
+    """مدل ثبت فعالیت‌های کاربر"""
+    ACTIVITY_TYPES = [
+        ('login', 'ورود'),
+        ('logout', 'خروج'),
+        ('upload', 'آپلود فایل'),
+        ('download', 'دانلود فایل'),
+        ('delete', 'حذف فایل'),
+        ('view', 'مشاهده'),
+        ('edit', 'ویرایش'),
+        ('send', 'ارسال فایل'),
+    ]
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='activities')
+    activity_type = models.CharField(max_length=20, choices=ACTIVITY_TYPES)
+    description = models.TextField(blank=True, null=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    # ارتباط با فایل (اختیاری)
+    file = models.ForeignKey(UploadedFile, on_delete=models.SET_NULL, null=True, blank=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'فعالیت کاربر'
+        verbose_name_plural = 'فعالیت‌های کاربر'
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.get_activity_type_display()} - {self.created_at}"
 
 
 

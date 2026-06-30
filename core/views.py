@@ -13,7 +13,7 @@ from django.utils import timezone
 from .services.llm_service import llm_service
 from .services.firewall_service import firewall
 from .models import (
-    FileActionLog, UploadedFile, UserSettings, UserProfile, 
+    FileActionLog, UploadedFile, UserSettings, UserProfile,
     PasswordPolicy, GroupLeader, LoginLog
 )
 from .permissions import has_permission, can_modify_user, check_permission
@@ -21,13 +21,10 @@ from .models import SystemPermission, UserPermission
 import os
 from django.db import models
 
-
-
 from .models import (
-    FileActionLog, UploadedFile, UserSettings, UserProfile, 
+    FileActionLog, UploadedFile, UserSettings, UserProfile,
     PasswordPolicy, GroupLeader, LoginLog, AINotification, AIThreatAlert
 )
-
 
 
 def get_or_create_settings(user):
@@ -41,13 +38,13 @@ def login_view(request):
         password = request.POST.get('password')
         user = authenticate(request, username=username, password=password)
         success = user is not None
-        
+
         LoginLog.objects.create(
             user=user if user else None,
             ip_address=request.META.get('REMOTE_ADDR'),
             success=success
         )
-        
+
         if user:
             login(request, user)
             role = 'superadmin' if user.is_superuser else 'admin' if user.is_staff else 'user'
@@ -74,34 +71,35 @@ def upload_files_view(request):
         rejected_count = 0
         threats_found = []
         notifications_created = []
-        
+
         for f in files:
             if f.name.lower().endswith('.exe'):
                 rejected_count += 1
                 continue
-            
+
             # 1. ذخیره فایل
             uploaded_file = UploadedFile.objects.create(
-                file=f, 
-                uploaded_by=request.user, 
+                file=f,
+                uploaded_by=request.user,
                 folder_name=folder_name
             )
             uploaded_count += 1
-            
+
             # 2. ====== تحلیل خودکار با AI ======
             try:
                 from .services.file_analysis_service import file_analysis_service
                 print(f"🔍 [AI] شروع تحلیل فایل: {f.name}")
-                
+
                 analysis_result = file_analysis_service.analyze_uploaded_file(uploaded_file)
-                
+
                 if analysis_result.get('success'):
                     notifications_created.append({
                         'file': f.name,
                         'threat_level': analysis_result.get('threat_level', 'info'),
-                        'notification_id': analysis_result.get('notification').id if analysis_result.get('notification') else None
+                        'notification_id': analysis_result.get('notification').id if analysis_result.get(
+                            'notification') else None
                     })
-                    
+
                     if analysis_result.get('threat_level') in ['warning', 'critical']:
                         threats_found.append({
                             "file": f.name,
@@ -111,17 +109,17 @@ def upload_files_view(request):
                     print(f"✅ [AI] تحلیل فایل {f.name} با موفقیت انجام شد - سطح: {analysis_result.get('threat_level')}")
                 else:
                     print(f"❌ [AI] تحلیل فایل {f.name} ناموفق: {analysis_result.get('error')}")
-                    
+
             except Exception as e:
                 print(f"❌ [AI] خطا در تحلیل فایل {f.name}: {e}")
                 import traceback
                 traceback.print_exc()
             # =================================
-            
+
             # 3. اسکن توسط فایروال هوشمند (قبلی)
             try:
                 scan_result = firewall.scan_file(uploaded_file)
-                
+
                 if scan_result.get("is_threat", False):
                     threats_found.append({
                         "file": f.name,
@@ -130,25 +128,25 @@ def upload_files_view(request):
                     })
             except Exception as e:
                 print(f"⚠️ خطا در اسکن فایروال برای {f.name}: {e}")
-        
+
         # پیام نهایی
         msg = f'{uploaded_count} فایل آپلود شد.'
         if rejected_count > 0:
             msg += f' {rejected_count} فایل EXE مجاز نبود.'
-        
+
         if threats_found:
             msg += f' ⚠️ {len(threats_found)} فایل مشکوک شناسایی شد!'
-        
+
         if notifications_created:
             msg += f' 📬 {len(notifications_created)} نوتیفیکیشن جدید برای ادمین‌ها ارسال شد.'
-        
+
         return JsonResponse({
-            'success': True, 
-            'msg': msg, 
+            'success': True,
+            'msg': msg,
             'threats': threats_found,
             'notifications': notifications_created
         })
-    
+
     return JsonResponse({'success': False, 'msg': 'خطا در آپلود'})
 
 
@@ -185,12 +183,12 @@ def admin_panel_view(request):
 def super_admin_panel(request):
     if not request.user.is_superuser:
         return redirect('dashboard')
-    
+
     policy, _ = PasswordPolicy.objects.get_or_create(pk=1)
     all_perms = Permission.objects.all()
     users = User.objects.all()
     all_roles = Group.objects.all()
-    
+
     context = {
         'policy': policy,
         'all_perms': all_perms,
@@ -205,141 +203,143 @@ def super_admin_panel(request):
 def admin_action_view(request):
     if not request.user.is_staff:
         return JsonResponse({'success': False, 'msg': 'Unauthorized'}, status=403)
-    
+
     if request.method != 'POST':
         return JsonResponse({'success': False, 'msg': 'متد نامعتبر'}, status=405)
-    
+
     try:
         data = json.loads(request.body)
     except json.JSONDecodeError:
         return JsonResponse({'success': False, 'msg': 'داده نامعتبر'}, status=400)
-    
+
     action = data.get('action')
-    
+
     # ایجاد کاربر جدید
     if action == 'create_user':
         if not has_permission(request.user, 'create_user'):
             return JsonResponse({'success': False, 'msg': 'شما دسترسی ایجاد کاربر ندارید'}, status=403)
-        
+
         username = data.get('username')
         password = data.get('password')
         is_staff = data.get('is_staff', False)
         groups = data.get('groups', [])
-        
+
         if User.objects.filter(username=username).exists():
             return JsonResponse({'success': False, 'msg': 'نام کاربری تکراری است'})
-        
+
         user = User.objects.create_user(username=username, password=password)
         user.is_staff = is_staff
         user.save()
-        
+
         if groups:
             group_objs = Group.objects.filter(id__in=groups)
             user.groups.set(group_objs)
-        
+
         UserProfile.objects.get_or_create(user=user)
         return JsonResponse({'success': True, 'msg': 'کاربر جدید ساخته شد'})
-    
+
     # تغییر رمز عبور
     elif action == 'change_password':
         if not has_permission(request.user, 'change_password'):
             return JsonResponse({'success': False, 'msg': 'شما دسترسی تغییر رمز ندارید'}, status=403)
-        
+
         target_user = get_object_or_404(User, id=data.get('user_id'))
-        
+
         if target_user.id == request.user.id and not request.user.is_superuser:
-            return JsonResponse({'success': False, 'msg': 'نمی‌توانید رمز خودتان را تغییر دهید. از بخش پروفایل اقدام کنید.'}, status=403)
-        
+            return JsonResponse(
+                {'success': False, 'msg': 'نمی‌توانید رمز خودتان را تغییر دهید. از بخش پروفایل اقدام کنید.'},
+                status=403)
+
         target_user.set_password(data.get('new_password'))
         target_user.save()
         return JsonResponse({'success': True, 'msg': 'رمز عبور تغییر کرد'})
-    
+
     # مسدود کردن کاربر
     elif action == 'block_user':
         if not has_permission(request.user, 'block_user'):
             return JsonResponse({'success': False, 'msg': 'شما دسترسی مسدود کردن کاربر را ندارید'}, status=403)
-        
+
         user_id = data.get('user_id')
         if not user_id:
             return JsonResponse({'success': False, 'msg': 'شناسه کاربر نامعتبر'})
-        
+
         if int(user_id) == request.user.id:
             return JsonResponse({'success': False, 'msg': 'نمی‌توانید خودتان را مسدود کنید'}, status=403)
-        
+
         user = get_object_or_404(User, id=user_id)
-        
+
         if user.is_superuser and not request.user.is_superuser:
             return JsonResponse({'success': False, 'msg': 'نمی‌توانید سوپر ادمین را مسدود کنید'}, status=403)
-        
+
         user.is_active = False
         user.save()
-        
+
         profile, _ = UserProfile.objects.get_or_create(user=user)
         profile.is_blocked = True
         profile.blocked_at = timezone.now()
         profile.save()
-        
+
         return JsonResponse({'success': True, 'msg': f'کاربر {user.username} مسدود شد'})
-    
+
     # فعال کردن کاربر
     elif action == 'unblock_user':
         if not has_permission(request.user, 'block_user'):
             return JsonResponse({'success': False, 'msg': 'شما دسترسی فعال کردن کاربر را ندارید'}, status=403)
-        
+
         user_id = data.get('user_id')
         user = get_object_or_404(User, id=user_id)
-        
+
         if user.id == request.user.id:
             return JsonResponse({'success': False, 'msg': 'نمی‌توانید وضعیت خودتان را تغییر دهید'}, status=403)
-        
+
         user.is_active = True
         user.save()
-        
+
         profile, _ = UserProfile.objects.get_or_create(user=user)
         profile.is_blocked = False
         profile.blocked_at = None
         profile.save()
-        
+
         return JsonResponse({'success': True, 'msg': f'کاربر {user.username} آزاد شد'})
-    
+
     # حذف فایل
     elif action == 'delete_file':
         if not has_permission(request.user, 'delete_own_file') and not request.user.is_superuser:
             return JsonResponse({'success': False, 'msg': 'شما دسترسی حذف فایل را ندارید'}, status=403)
-        
+
         file_id = data.get('file_id')
         uploaded_file = get_object_or_404(UploadedFile, id=file_id)
-        
+
         if uploaded_file.uploaded_by != request.user and not request.user.is_staff:
             return JsonResponse({'success': False, 'msg': 'شما مالک این فایل نیستید'}, status=403)
-        
+
         if uploaded_file.file:
             uploaded_file.file.delete()
         uploaded_file.delete()
-        
+
         return JsonResponse({'success': True, 'msg': 'فایل حذف شد'})
-    
+
     # ==================== اضافه کردن اکشن حذف کاربر ====================
     elif action == 'delete_user':
         if not request.user.is_superuser:
             return JsonResponse({'success': False, 'msg': 'فقط سوپرادمین می‌تواند کاربر حذف کند'}, status=403)
-        
+
         user_id = data.get('user_id')
         if not user_id:
             return JsonResponse({'success': False, 'msg': 'شناسه کاربر نامعتبر'})
-        
+
         target_user = get_object_or_404(User, id=user_id)
-        
+
         # جلوگیری از حذف خودش
         if target_user.id == request.user.id:
             return JsonResponse({'success': False, 'msg': 'نمی‌توانید خودتان را حذف کنید'}, status=403)
-        
+
         # جلوگیری از حذف آخرین سوپرادمین
         if target_user.is_superuser and User.objects.filter(is_superuser=True).count() <= 1:
             return JsonResponse({'success': False, 'msg': 'نمی‌توانید آخرین سوپرادمین را حذف کنید'}, status=403)
-        
+
         username = target_user.username
-        
+
         # حذف فایل‌های کاربر
         user_files = UploadedFile.objects.filter(uploaded_by=target_user)
         for file_obj in user_files:
@@ -349,35 +349,35 @@ def admin_action_view(request):
                 except:
                     pass
             file_obj.delete()
-        
+
         target_user.delete()
-        
+
         return JsonResponse({'success': True, 'msg': f'کاربر {username} با موفقیت حذف شد'})
-    
+
     # اختصاص نقش به کاربر
     elif action == 'assign_role':
         if not has_permission(request.user, 'assign_role'):
             return JsonResponse({'success': False, 'msg': 'شما دسترسی اختصاص نقش را ندارید'}, status=403)
-        
+
         user_id = data.get('user_id')
         role_id = data.get('role_id')
         assign = data.get('assign', True)
-        
+
         target_user = get_object_or_404(User, id=user_id)
         role = get_object_or_404(Group, id=role_id)
-        
+
         if target_user.id == request.user.id and not request.user.is_superuser:
             return JsonResponse({'success': False, 'msg': 'نمی‌توانید نقش خودتان را تغییر دهید'}, status=403)
-        
+
         if assign:
             target_user.groups.add(role)
             msg = f'نقش {role.name} به کاربر {target_user.username} اضافه شد'
         else:
             target_user.groups.remove(role)
             msg = f'نقش {role.name} از کاربر {target_user.username} حذف شد'
-        
+
         return JsonResponse({'success': True, 'msg': msg})
-    
+
     return JsonResponse({'success': False, 'msg': 'Invalid action'})
 
 
@@ -386,17 +386,17 @@ def admin_action_view(request):
 def super_admin_action(request):
     if not request.user.is_superuser:
         return JsonResponse({'success': False, 'msg': 'دسترسی غیرمجاز'}, status=403)
-    
+
     if request.method != 'POST':
         return JsonResponse({'success': False, 'msg': 'متد نامعتبر'}, status=405)
-    
+
     try:
         data = json.loads(request.body)
     except json.JSONDecodeError:
         return JsonResponse({'success': False, 'msg': 'داده نامعتبر'}, status=400)
-    
+
     action = data.get('action')
-    
+
     if action == 'update_policy':
         policy = PasswordPolicy.objects.first()
         if policy:
@@ -406,33 +406,33 @@ def super_admin_action(request):
             policy.require_special_char = data.get('require_special_char', False)
             policy.save()
         return JsonResponse({'success': True, 'msg': 'سیاست رمز عبور ذخیره شد.'})
-    
+
     elif action == 'create_role_with_perms':
         role_name = data.get('role_name')
         perm_ids = data.get('permissions', [])
         leader_id = data.get('leader_id')
-        
+
         if not role_name:
             return JsonResponse({'success': False, 'msg': 'نام نقش نمی‌تواند خالی باشد'})
-        
+
         if Group.objects.filter(name=role_name).exists():
             return JsonResponse({'success': False, 'msg': 'نقش با این نام وجود دارد'})
-        
+
         group = Group.objects.create(name=role_name)
-        
+
         if perm_ids:
             permissions = Permission.objects.filter(id__in=perm_ids)
             group.permissions.set(permissions)
-        
+
         if leader_id:
             try:
                 leader = User.objects.get(id=leader_id)
                 GroupLeader.objects.create(group=group, leader=leader)
             except User.DoesNotExist:
                 pass
-        
+
         return JsonResponse({'success': True, 'msg': f'نقش {role_name} ساخته شد.'})
-    
+
     return JsonResponse({'success': False, 'msg': 'اکشن نامعتبر'})
 
 
@@ -449,10 +449,10 @@ def send_files_view(request):
     if request.method == 'POST':
         recipient_id = request.POST.get('recipient_id')
         files = request.FILES.getlist('files')
-        
+
         if not recipient_id or not files:
             return JsonResponse({'success': False, 'msg': 'اطلاعات ناقص'})
-        
+
         try:
             recipient = User.objects.get(id=recipient_id)
             sent_count = 0
@@ -469,7 +469,7 @@ def send_files_view(request):
             return JsonResponse({'success': True, 'msg': f'{sent_count} فایل ارسال شد'})
         except User.DoesNotExist:
             return JsonResponse({'success': False, 'msg': 'کاربر یافت نشد'})
-    
+
     return JsonResponse({'success': False, 'msg': 'متد نامعتبر'})
 
 
@@ -477,11 +477,11 @@ def send_files_view(request):
 def download_file_view(request, file_id):
     try:
         uploaded_file = UploadedFile.objects.get(id=file_id, is_deleted=False)
-        
+
         # بررسی دسترسی
         if uploaded_file.uploaded_by != request.user and not request.user.is_staff:
             return JsonResponse({'success': False, 'msg': 'دسترسی ندارید'}, status=403)
-        
+
         # ====== ثبت دانلود با تحلیل AI ======
         from .services.action_analyzer import action_analyzer
         analysis_result = action_analyzer.analyze_action(
@@ -490,9 +490,9 @@ def download_file_view(request, file_id):
             file_obj=uploaded_file,
             ip_address=request.META.get('REMOTE_ADDR')
         )
-        
+
         return redirect(uploaded_file.file.url)
-        
+
     except UploadedFile.DoesNotExist:
         return JsonResponse({'success': False, 'msg': 'فایل یافت نشد'}, status=404)
 
@@ -511,21 +511,21 @@ def delete_my_file_view(request):
         try:
             data = json.loads(request.body)
             file_id = data.get('file_id')
-            
+
             uploaded_file = UploadedFile.objects.get(id=file_id, uploaded_by=request.user)
             file_name = uploaded_file.file.name
-            
+
             if uploaded_file.file:
                 uploaded_file.file.delete()
             uploaded_file.delete()
-            
+
             return JsonResponse({'success': True, 'msg': 'فایل با موفقیت حذف شد'})
-            
+
         except UploadedFile.DoesNotExist:
             return JsonResponse({'success': False, 'msg': 'فایل یافت نشد'}, status=404)
         except Exception as e:
             return JsonResponse({'success': False, 'msg': str(e)}, status=400)
-    
+
     return JsonResponse({'success': False, 'msg': 'متد نامعتبر'}, status=405)
 
 
@@ -533,12 +533,12 @@ def delete_my_file_view(request):
 def login_logs_view(request):
     if not request.user.is_superuser:
         return redirect('dashboard')
-    
+
     logs = LoginLog.objects.all().order_by('-login_time')
     paginator = Paginator(logs, 20)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
-    
+
     context = {
         'page_obj': page_obj,
         'total_logs': logs.count(),
@@ -550,7 +550,7 @@ def login_logs_view(request):
 def user_detail_view(request, user_id):
     if not request.user.is_superuser:
         return redirect('dashboard')
-    
+
     user = get_object_or_404(User, id=user_id)
     context = {
         'target_user': user,
@@ -558,11 +558,11 @@ def user_detail_view(request, user_id):
     return render(request, 'user_detail.html', context)
 
 
-@login_required 
+@login_required
 def create_role_view(request):
     if not request.user.is_superuser:
         return redirect('dashboard')
-    
+
     if request.method == 'POST':
         role_name = request.POST.get('role_name')
         if role_name and not Group.objects.filter(name=role_name).exists():
@@ -571,7 +571,7 @@ def create_role_view(request):
         else:
             messages.error(request, 'خطا در ایجاد نقش')
         return redirect('super_admin_panel')
-    
+
     return redirect('super_admin_panel')
 
 
@@ -579,15 +579,15 @@ def create_role_view(request):
 def file_summary_view(request, file_id):
     if not request.user.is_staff:
         return JsonResponse({'success': False, 'msg': 'دسترسی غیرمجاز'}, status=403)
-    
+
     file_obj = get_object_or_404(UploadedFile, id=file_id)
-    
+
     if request.method == 'POST':
         level = request.POST.get('level', 'summary')
         question = request.POST.get('question', '')
-        
+
         content = firewall.extract_file_content(file_obj)
-        
+
         try:
             if question:
                 result = llm_service.answer_question_about_file(
@@ -605,47 +605,39 @@ def file_summary_view(request, file_id):
                 return JsonResponse({'success': True, 'result': result, 'type': 'summary'})
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)}, status=500)
-    
+
     return render(request, 'file_summary.html', {'file': file_obj})
 
 
-# ============================================================
-# ✅ اصلاح شده: تابع security_alerts_view
-# ============================================================
 @login_required
 def security_alerts_view(request):
     if not request.user.is_staff:
         return redirect('dashboard')
-    
+
+    alerts = firewall.get_pending_alerts()
+
     from .models import AIThreatAlert
-    
-    # ✅ دریافت همه هشدارها، مرتب شده بر اساس جدیدترین
-    alerts = AIThreatAlert.objects.all().order_by('-created_at')
-    
     stats = {
-        'total': alerts.count(),
-        'pending': alerts.filter(status='pending').count(),
-        'critical': alerts.filter(severity='critical').count(),
-        'high': alerts.filter(severity='high').count(),
+        'total': AIThreatAlert.objects.count(),
+        'pending': AIThreatAlert.objects.filter(status='pending').count(),
+        'critical': AIThreatAlert.objects.filter(severity='critical').count(),
+        'high': AIThreatAlert.objects.filter(severity='high').count(),
     }
-    
-    return render(request, 'security_alerts.html', {
-        'alerts': alerts,
-        'stats': stats
-    })
+
+    return render(request, 'security_alerts.html', {'alerts': alerts, 'stats': stats})
 
 
 @login_required
 def resolve_alert_view(request, alert_id):
     if not request.user.is_staff:
         return JsonResponse({'success': False, 'msg': 'دسترسی غیرمجاز'}, status=403)
-    
+
     from .models import AIThreatAlert
     alert = get_object_or_404(AIThreatAlert, id=alert_id)
-    
+
     if request.method == 'POST':
         action = request.POST.get('action')
-        
+
         if action == 'block':
             alert.file.is_deleted = True
             alert.file.save()
@@ -654,14 +646,14 @@ def resolve_alert_view(request, alert_id):
             alert.status = 'ignored'
         elif action == 'review':
             alert.status = 'reviewed'
-        
+
         alert.reviewed_by = request.user
         alert.reviewed_at = timezone.now()
         alert.save()
-        
+
         messages.success(request, f'هشدار با موفقیت {dict(alert.STATUS_CHOICES).get(alert.status)} شد')
         return redirect('security_alerts')
-    
+
     return render(request, 'resolve_alert.html', {'alert': alert})
 
 
@@ -669,7 +661,7 @@ def resolve_alert_view(request, alert_id):
 def alerts_count_view(request):
     if not request.user.is_staff:
         return JsonResponse({'count': 0})
-    
+
     from .models import AIThreatAlert
     count = AIThreatAlert.objects.filter(status='pending').count()
     return JsonResponse({'count': count})
@@ -679,13 +671,13 @@ def alerts_count_view(request):
 def security_stats_view(request):
     if not request.user.is_staff:
         return JsonResponse({})
-    
+
     from .models import AIThreatAlert
     pending = AIThreatAlert.objects.filter(status='pending').count()
     critical = AIThreatAlert.objects.filter(severity='critical').count()
     high = AIThreatAlert.objects.filter(severity='high').count()
     total = AIThreatAlert.objects.count()
-    
+
     return JsonResponse({
         'pending_alerts': pending,
         'critical_alerts': critical,
@@ -700,14 +692,14 @@ def analyze_file_with_ai(request, file_id):
     """تحلیل فایل با AI"""
     if not request.user.is_staff:
         return JsonResponse({'success': False, 'msg': 'دسترسی غیرمجاز'}, status=403)
-    
+
     file_obj = get_object_or_404(UploadedFile, id=file_id)
-    
+
     # خواندن محتوای فایل
     content = ""
     file_path = file_obj.file.path
     ext = file_obj.file.name.split('.')[-1].lower() if '.' in file_obj.file.name else 'unknown'
-    
+
     # استخراج محتوا بر اساس نوع فایل
     if ext == 'txt':
         try:
@@ -715,7 +707,7 @@ def analyze_file_with_ai(request, file_id):
                 content = f.read()[:5000]
         except:
             content = "خطا در خواندن فایل"
-    
+
     elif ext == 'pdf':
         try:
             import PyPDF2
@@ -725,15 +717,15 @@ def analyze_file_with_ai(request, file_id):
                     content += page.extract_text() or ""
         except:
             content = "خطا در خواندن PDF"
-    
+
     else:
         content = f"فایل {ext} - محتوا قابل نمایش نیست"
-    
+
     # دریافت سطح خلاصه‌سازی
     action = request.POST.get('action', 'summarize')
     level = request.POST.get('level', 'summary')
     question = request.POST.get('question', '')
-    
+
     try:
         if action == 'ask' and question:
             result = llm_service.answer_question_about_file(
@@ -752,13 +744,13 @@ def analyze_file_with_ai(request, file_id):
                 filename=file_obj.file.name,
                 detail_level=level
             )
-            
+
             # بررسی تهدیدات (ساده)
             threat_status = {
                 'severity': 'low',
                 'threat_type': 'none'
             }
-            
+
             # بررسی کلمات کلیدی مشکوک
             suspicious_keywords = ['password', 'hack', 'crack', 'malware', 'virus', 'phishing']
             content_lower = content.lower()
@@ -769,7 +761,7 @@ def analyze_file_with_ai(request, file_id):
                         'threat_type': keyword
                     }
                     break
-            
+
             return JsonResponse({
                 'success': True,
                 'result': result,
@@ -788,16 +780,16 @@ def analyze_user_view(request, user_id):
     """تحلیل کاربر با AI"""
     if not request.user.is_staff:
         return JsonResponse({'success': False, 'msg': 'دسترسی غیرمجاز'}, status=403)
-    
+
     user = get_object_or_404(User, id=user_id)
-       
+
     # جمع‌آوری اطلاعات کاربر
     user_files = UploadedFile.objects.filter(uploaded_by=user, is_deleted=False)
     file_types = {}
     for uf in user_files:
         ext = uf.file.name.split('.')[-1] if '.' in uf.file.name else 'unknown'
         file_types[ext] = file_types.get(ext, 0) + 1
-    
+
     user_data = {
         'id': user.id,
         'username': user.username,
@@ -806,14 +798,14 @@ def analyze_user_view(request, user_id):
         'is_staff': user.is_staff,
         'date_joined': user.date_joined.strftime('%Y/%m/%d') if user.date_joined else 'نامشخص'
     }
-    
+
     # تحلیل با AI
     try:
         if llm_service is None:
             analysis = "⚠️ سرویس هوش مصنوعی در دسترس نیست. لطفاً اطمینان حاصل کنید که Ollama در حال اجراست."
         else:
             analysis = llm_service.analyze_user_behavior(user_data, [])
-        
+
         return JsonResponse({
             'success': True,
             'analysis': analysis,
@@ -836,10 +828,11 @@ def analyze_all_files_view(request):
     """تحلیل همه فایل‌ها (آمار کلی)"""
     if not request.user.is_staff:
         return JsonResponse({'success': False, 'msg': 'دسترسی غیرمجاز'}, status=403)
-    
+
     total_files = UploadedFile.objects.filter(is_deleted=False).count()
-    files_by_user = UploadedFile.objects.filter(is_deleted=False).values('uploaded_by__username').annotate(count=models.Count('id'))
-    
+    files_by_user = UploadedFile.objects.filter(is_deleted=False).values('uploaded_by__username').annotate(
+        count=models.Count('id'))
+
     return JsonResponse({
         'success': True,
         'total_files': total_files,
@@ -857,7 +850,7 @@ def analyze_all_users_view(request):
     total_users = users.count()
     active_users = users.filter(is_active=True).count()
     staff_users = users.filter(is_staff=True).count()
-    
+
     return JsonResponse({
         'success': True,
         'total_users': total_users,
@@ -870,9 +863,9 @@ def analyze_all_users_view(request):
 def my_permissions_view(request):
     """دریافت دسترسی‌های کاربر جاری"""
     from .permissions import get_user_permissions_list
-    
+
     permissions = get_user_permissions_list(request.user)
-    
+
     return JsonResponse({
         'user_id': request.user.id,
         'username': request.user.username,
@@ -887,7 +880,7 @@ def get_all_roles(request):
     """دریافت تمام نقش‌ها (گروه‌ها)"""
     if not request.user.is_staff:
         return JsonResponse([], safe=False)
-    
+
     roles = Group.objects.all().values('id', 'name')
     return JsonResponse(list(roles), safe=False)
 
@@ -897,7 +890,7 @@ def get_all_permissions(request):
     """دریافت تمام دسترسی‌های واقعی Django"""
     if not request.user.is_staff:
         return JsonResponse([], safe=False)
-    
+
     permissions = Permission.objects.all().values('id', 'name', 'codename')
     perm_list = []
     for p in permissions:
@@ -910,13 +903,13 @@ def get_all_permissions(request):
             name_fa = name_fa.replace('Can delete', 'امکان حذف')
         elif 'Can view' in name_fa:
             name_fa = name_fa.replace('Can view', 'امکان مشاهده')
-        
+
         perm_list.append({
             'id': p['id'],
             'name': name_fa,
             'codename': p['codename']
         })
-    
+
     return JsonResponse(perm_list, safe=False)
 
 
@@ -925,7 +918,7 @@ def get_role_permissions(request, role_id):
     """دریافت دسترسی‌های یک نقش خاص"""
     if not request.user.is_staff:
         return JsonResponse([], safe=False)
-    
+
     try:
         role = Group.objects.get(id=role_id)
         permissions = role.permissions.all().values_list('id', flat=True)
@@ -939,19 +932,19 @@ def save_role_permissions(request):
     """ذخیره دسترسی‌های یک نقش"""
     if not request.user.is_staff:
         return JsonResponse({'success': False, 'msg': 'دسترسی غیرمجاز'}, status=403)
-    
+
     if request.method != 'POST':
         return JsonResponse({'success': False, 'msg': 'متد نامعتبر'}, status=405)
-    
+
     try:
         data = json.loads(request.body)
         role_id = data.get('role_id')
         perm_ids = data.get('permissions', [])
-        
+
         role = Group.objects.get(id=role_id)
         permissions = Permission.objects.filter(id__in=perm_ids)
         role.permissions.set(permissions)
-        
+
         return JsonResponse({'success': True, 'msg': 'دسترسی‌ها با موفقیت ذخیره شد'})
     except Group.DoesNotExist:
         return JsonResponse({'success': False, 'msg': 'نقش یافت نشد'}, status=404)
@@ -964,22 +957,22 @@ def create_new_role(request):
     """ایجاد نقش جدید"""
     if not request.user.is_superuser:
         return JsonResponse({'success': False, 'msg': 'دسترسی غیرمجاز'}, status=403)
-    
+
     if request.method != 'POST':
         return JsonResponse({'success': False, 'msg': 'متد نامعتبر'}, status=405)
-    
+
     try:
         data = json.loads(request.body)
         role_name = data.get('name', '').strip()
-        
+
         if not role_name:
             return JsonResponse({'success': False, 'msg': 'نام نقش نمی‌تواند خالی باشد'})
-        
+
         if Group.objects.filter(name=role_name).exists():
             return JsonResponse({'success': False, 'msg': 'نقش با این نام قبلاً وجود دارد'})
-        
+
         group = Group.objects.create(name=role_name)
-        
+
         return JsonResponse({'success': True, 'msg': f'نقش {role_name} با موفقیت ایجاد شد', 'role_id': group.id})
     except Exception as e:
         return JsonResponse({'success': False, 'msg': str(e)}, status=400)
@@ -990,8 +983,9 @@ def get_users_list(request):
     """دریافت لیست کاربران برای پنل مدیریت"""
     if not request.user.is_staff:
         return JsonResponse([], safe=False)
-    
-    users = User.objects.all().values('id', 'username', 'first_name', 'last_name', 'email', 'is_active', 'is_staff', 'is_superuser')
+
+    users = User.objects.all().values('id', 'username', 'first_name', 'last_name', 'email', 'is_active', 'is_staff',
+                                      'is_superuser')
     user_list = []
     for u in users:
         full_name = f"{u['first_name']} {u['last_name']}".strip() or u['username']
@@ -1004,7 +998,7 @@ def get_users_list(request):
             'is_staff': u['is_staff'],
             'is_superuser': u['is_superuser']
         })
-    
+
     return JsonResponse(user_list, safe=False)
 
 
@@ -1013,18 +1007,18 @@ def set_password_policy(request):
     """تنظیم سیاست رمز عبور"""
     if not request.user.is_superuser:
         return JsonResponse({'success': False, 'msg': 'دسترسی غیرمجاز'}, status=403)
-    
+
     if request.method != 'POST':
         return JsonResponse({'success': False, 'msg': 'متد نامعتبر'}, status=405)
-    
+
     try:
         data = json.loads(request.body)
         min_length = data.get('min_length', 8)
-        
+
         policy, created = PasswordPolicy.objects.get_or_create(pk=1)
         policy.min_password_length = min_length
         policy.save()
-        
+
         return JsonResponse({'success': True, 'msg': 'سیاست رمز عبور ذخیره شد'})
     except Exception as e:
         return JsonResponse({'success': False, 'msg': str(e)}, status=400)
@@ -1035,24 +1029,24 @@ def toggle_block_user(request, user_id):
     """تغییر وضعیت مسدودیت کاربر"""
     if not request.user.is_staff:
         return JsonResponse({'success': False, 'msg': 'دسترسی غیرمجاز'}, status=403)
-    
+
     if request.method != 'POST':
         return JsonResponse({'success': False, 'msg': 'متد نامعتبر'}, status=405)
-    
+
     try:
         target_user = User.objects.get(id=user_id)
-        
+
         if target_user.id == request.user.id:
             return JsonResponse({'success': False, 'msg': 'نمی‌توانید خودتان را مسدود کنید'}, status=403)
-        
+
         target_user.is_active = not target_user.is_active
         target_user.save()
-        
+
         profile, _ = UserProfile.objects.get_or_create(user=target_user)
         profile.is_blocked = not target_user.is_active
         profile.blocked_at = timezone.now() if profile.is_blocked else None
         profile.save()
-        
+
         status = 'مسدود' if not target_user.is_active else 'فعال'
         return JsonResponse({'success': True, 'msg': f'کاربر {status} شد'})
     except User.DoesNotExist:
@@ -1066,19 +1060,19 @@ def delete_user_by_id(request, user_id):
     """حذف کاربر توسط ادمین"""
     if not request.user.is_superuser:
         return JsonResponse({'success': False, 'msg': 'دسترسی غیرمجاز'}, status=403)
-    
+
     if request.method != 'POST':
         return JsonResponse({'success': False, 'msg': 'متد نامعتبر'}, status=405)
-    
+
     try:
         target_user = User.objects.get(id=user_id)
-        
+
         if target_user.id == request.user.id:
             return JsonResponse({'success': False, 'msg': 'نمی‌توانید خودتان را حذف کنید'}, status=403)
-        
+
         username = target_user.username
         target_user.delete()
-        
+
         return JsonResponse({'success': True, 'msg': f'کاربر {username} با موفقیت حذف شد'})
     except User.DoesNotExist:
         return JsonResponse({'success': False, 'msg': 'کاربر یافت نشد'}, status=404)
@@ -1088,35 +1082,36 @@ def delete_user_by_id(request, user_id):
 
 from .services.file_reader import FileReader
 
+
 @login_required
 def analyze_user_personality_view(request, user_id):
     """تحلیل شخصیت کاربر با AI - نمایش در صفحه"""
     if not request.user.is_staff:
         return JsonResponse({'success': False, 'msg': 'دسترسی غیرمجاز'}, status=403)
-    
+
     user = get_object_or_404(User, id=user_id)
-    
+
     user_files = UploadedFile.objects.filter(uploaded_by=user, is_deleted=False).order_by('-uploaded_at')[:20]
-    
+
     all_content = []
     file_types = {}
     suspicious_files = []
-    
+
     for uf in user_files:
         try:
             file_info = FileReader.read_file(uf.file)
             ext = file_info['extension']
             file_types[ext] = file_types.get(ext, 0) + 1
-            
+
             if file_info['content']:
                 all_content.append(f"\n\n--- فایل: {uf.file.name} ---\n{file_info['content'][:2000]}")
-            
+
             if ext in ['.exe', '.jar', '.bat', '.ps1', '.sh']:
                 suspicious_files.append(uf.file.name)
-                
+
         except Exception as e:
             all_content.append(f"\n\n--- فایل: {uf.file.name} (خطا در خواندن: {e}) ---")
-    
+
     user_data = {
         'username': user.username,
         'total_uploads': user_files.count(),
@@ -1125,16 +1120,16 @@ def analyze_user_personality_view(request, user_id):
         'is_superuser': user.is_superuser,
         'date_joined': user.date_joined.strftime('%Y/%m/%d') if user.date_joined else 'نامشخص'
     }
-    
+
     try:
         if llm_service is None:
             analysis = "⚠️ سرویس هوش مصنوعی در دسترس نیست. لطفاً اطمینان حاصل کنید که Ollama در حال اجراست."
         else:
             analysis = llm_service.analyze_user_personality(
-                user_data, 
+                user_data,
                 "\n".join(all_content)[:8000]
             )
-        
+
         return JsonResponse({
             'success': True,
             'analysis': analysis,
@@ -1160,16 +1155,17 @@ import platform
 import re
 import psutil
 
+
 @login_required
 def ai_settings_panel(request):
     """پنل تنظیمات هوش مصنوعی و سیستم"""
     if not request.user.is_staff:
         messages.error(request, "شما دسترسی به این صفحه را ندارید!")
         return redirect('dashboard')
-    
+
     ai_settings = AISettings.get_settings()
     system_settings = SystemSettings.get_settings()
-    
+
     context = {
         'ai_settings': ai_settings,
         'system_settings': system_settings,
@@ -1184,16 +1180,16 @@ def ai_test_connection_api(request):
     """API تست اتصال به Ollama"""
     if not request.user.is_staff:
         return JsonResponse({'success': False, 'message': 'دسترسی غیرمجاز'}, status=403)
-    
+
     if request.method != 'POST':
         return JsonResponse({'success': False, 'message': 'متد نامعتبر'}, status=405)
-    
+
     try:
         data = json.loads(request.body)
         host = data.get('host')
         port = data.get('port')
         model = data.get('model')
-        
+
         result = ai_manager.test_connection(host, port, model)
         return JsonResponse(result)
     except Exception as e:
@@ -1206,10 +1202,10 @@ def ai_save_settings_api(request):
     """API ذخیره تنظیمات AI"""
     if not request.user.is_staff:
         return JsonResponse({'success': False, 'message': 'دسترسی غیرمجاز'}, status=403)
-    
+
     if request.method != 'POST':
         return JsonResponse({'success': False, 'message': 'متد نامعتبر'}, status=405)
-    
+
     try:
         data = json.loads(request.body)
         result = ai_manager.save_settings(data)
@@ -1223,10 +1219,10 @@ def ai_get_models_api(request):
     """API دریافت لیست مدل‌های موجود"""
     if not request.user.is_staff:
         return JsonResponse({'success': False, 'models': []}, status=403)
-    
+
     host = request.GET.get('host')
     port = request.GET.get('port')
-    
+
     result = ai_manager.get_available_models(host, port)
     return JsonResponse(result)
 
@@ -1236,7 +1232,7 @@ def ai_restart_ollama_api(request):
     """API ریستارت سرویس Ollama (فقط سوپرادمین)"""
     if not request.user.is_superuser:
         return JsonResponse({'success': False, 'message': 'دسترسی غیرمجاز'}, status=403)
-    
+
     try:
         import subprocess
         result = subprocess.run(['ollama', 'serve', '--restart'], capture_output=True, text=True)
@@ -1249,7 +1245,6 @@ def ai_restart_ollama_api(request):
         return JsonResponse({'success': False, 'message': str(e)}, status=400)
 
 
-# ==================== تنظیمات شبکه ====================
 
 def get_network_info():
     """دریافت اطلاعات شبکه و سیستم (ویندوز)"""
@@ -1269,29 +1264,30 @@ def get_network_info():
         'ram_total': '',
         'ram_available': '',
     }
-    
+
     try:
         if platform.system() == 'Windows':
-            result = subprocess.run(['ipconfig', '/all'], capture_output=True, text=True, encoding='cp1256', errors='ignore')
+            result = subprocess.run(['ipconfig', '/all'], capture_output=True, text=True, encoding='cp1256',
+                                    errors='ignore')
             output = result.stdout
-            
+
             ip_pattern = r'IPv4 Address[.\s]*: ([\d.]+)'
             subnet_pattern = r'Subnet Mask[.\s]*: ([\d.]+)'
             gateway_pattern = r'Default Gateway[.\s]*: ([\d.]+)'
             dns_pattern = r'DNS Servers[.\s]*: ([\d.]+)'
             mac_pattern = r'Physical Address[.\s]*: ([\w-]+)'
-            
+
             ip_matches = re.findall(ip_pattern, output)
             for ip in ip_matches:
                 if ip != '127.0.0.1' and ip != '0.0.0.0':
                     info['ip_address'] = ip
                     break
-            
+
             subnet_match = re.search(subnet_pattern, output)
             gateway_match = re.search(gateway_pattern, output)
             dns_matches = re.findall(dns_pattern, output)
             mac_match = re.search(mac_pattern, output)
-            
+
             if subnet_match:
                 info['subnet_mask'] = subnet_match.group(1)
             if gateway_match and gateway_match.group(1) != '' and gateway_match.group(1) != '0.0.0.0':
@@ -1303,20 +1299,20 @@ def get_network_info():
                     info['secondary_dns'] = valid_dns[1] if len(valid_dns) > 1 else ''
             if mac_match:
                 info['mac_address'] = mac_match.group(1)
-                
+
         elif platform.system() in ['Linux', 'Darwin']:
             result = subprocess.run(['ifconfig'], capture_output=True, text=True, errors='ignore')
             output = result.stdout
-            
+
             ip_match = re.search(r'inet (\d+\.\d+\.\d+\.\d+)', output)
             if ip_match:
                 info['ip_address'] = ip_match.group(1)
-                
+
             result = subprocess.run(['ip', 'route', 'show', 'default'], capture_output=True, text=True, errors='ignore')
             gateway_match = re.search(r'default via (\d+\.\d+\.\d+\.\d+)', result.stdout)
             if gateway_match:
                 info['default_gateway'] = gateway_match.group(1)
-                
+
             try:
                 with open('/etc/resolv.conf', 'r') as f:
                     dns_content = f.read()
@@ -1326,18 +1322,18 @@ def get_network_info():
                         info['secondary_dns'] = dns_matches[1] if len(dns_matches) > 1 else ''
             except:
                 pass
-                
+
     except Exception as e:
         print(f"Error getting network info: {e}")
-    
+
     try:
         mem = psutil.virtual_memory()
-        info['ram_total'] = f"{mem.total / (1024**3):.1f} GB"
-        info['ram_available'] = f"{mem.available / (1024**3):.1f} GB"
+        info['ram_total'] = f"{mem.total / (1024 ** 3):.1f} GB"
+        info['ram_available'] = f"{mem.available / (1024 ** 3):.1f} GB"
     except:
         info['ram_total'] = 'نامشخص'
         info['ram_available'] = 'نامشخص'
-    
+
     return info
 
 
@@ -1346,7 +1342,7 @@ def get_network_info_api(request):
     """API دریافت اطلاعات شبکه"""
     if not request.user.is_superuser:
         return JsonResponse({'success': False, 'message': 'دسترسی غیرمجاز'}, status=403)
-    
+
     info = get_network_info()
     return JsonResponse({'success': True, 'network_info': info})
 
@@ -1356,19 +1352,19 @@ def save_network_settings_api(request):
     """API ذخیره تنظیمات شبکه"""
     if not request.user.is_superuser:
         return JsonResponse({'success': False, 'message': 'دسترسی غیرمجاز'}, status=403)
-    
+
     if request.method != 'POST':
         return JsonResponse({'success': False, 'message': 'متد نامعتبر'}, status=405)
-    
+
     try:
         data = json.loads(request.body)
         settings = SystemSettings.get_settings()
-        
+
         settings.server_ip = data.get('ip_address', settings.server_ip)
         settings.server_port = int(data.get('port', settings.server_port))
         settings.allow_remote_access = data.get('allow_remote_access', False)
         settings.save()
-        
+
         return JsonResponse({
             'success': True,
             'message': 'تنظیمات شبکه با موفقیت ذخیره شد'
@@ -1382,31 +1378,31 @@ def apply_network_settings_api(request):
     """API اعمال تنظیمات شبکه در سیستم (فقط ویندوز)"""
     if not request.user.is_superuser:
         return JsonResponse({'success': False, 'message': 'دسترسی غیرمجاز'}, status=403)
-    
+
     if request.method != 'POST':
         return JsonResponse({'success': False, 'message': 'متد نامعتبر'}, status=405)
-    
+
     if platform.system() != 'Windows':
         return JsonResponse({'success': False, 'message': 'این قابلیت فقط در ویندوز پشتیبانی می‌شود'}, status=400)
-    
+
     try:
         data = json.loads(request.body)
         settings = SystemSettings.get_settings()
-        
+
         interface_name = "Wi-Fi"
         ip = data.get('ip_address', settings.server_ip)
         subnet = data.get('subnet_mask', '255.255.255.0')
         gateway = data.get('default_gateway', '')
         dns1 = data.get('primary_dns', '8.8.8.8')
         dns2 = data.get('secondary_dns', '8.8.4.4')
-        
+
         if ip and subnet:
             commands = [
                 f'netsh interface ip set address "{interface_name}" static {ip} {subnet} {gateway}',
                 f'netsh interface ip set dns "{interface_name}" static {dns1}',
                 f'netsh interface ip add dns "{interface_name}" {dns2} index=2'
             ]
-            
+
             results = []
             for cmd in commands:
                 result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
@@ -1415,7 +1411,7 @@ def apply_network_settings_api(request):
                     'output': result.stdout,
                     'error': result.stderr
                 })
-            
+
             return JsonResponse({
                 'success': True,
                 'message': 'تنظیمات شبکه با موفقیت اعمال شد',
@@ -1423,7 +1419,7 @@ def apply_network_settings_api(request):
             })
         else:
             return JsonResponse({'success': False, 'message': 'IP و Subnet نمی‌توانند خالی باشند'}, status=400)
-            
+
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=400)
 
@@ -1438,22 +1434,22 @@ def delete_role_view(request, role_id):
             return JsonResponse({'success': False, 'msg': 'دسترسی غیرمجاز'}, status=403)
         messages.error(request, 'شما دسترسی حذف نقش را ندارید!')
         return redirect('super_admin_panel')
-    
+
     role = get_object_or_404(Group, id=role_id)
-    
+
     protected_roles = ['admin', 'superadmin', 'user']
     if role.name.lower() in protected_roles:
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({'success': False, 'msg': f'نقش {role.name} قابل حذف نیست'}, status=400)
         messages.error(request, f'نقش {role.name} قابل حذف نیست!')
         return redirect('super_admin_panel')
-    
+
     role_name = role.name
     role.delete()
-    
+
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return JsonResponse({'success': True, 'msg': f'نقش {role_name} با موفقیت حذف شد'})
-    
+
     messages.success(request, f'نقش {role_name} با موفقیت حذف شد')
     return redirect('super_admin_panel')
 
@@ -1466,23 +1462,23 @@ def delete_user_view(request, user_id):
             return JsonResponse({'success': False, 'msg': 'دسترسی غیرمجاز'}, status=403)
         messages.error(request, 'شما دسترسی حذف کاربر را ندارید!')
         return redirect('dashboard')
-    
+
     target_user = get_object_or_404(User, id=user_id)
-    
+
     if target_user.id == request.user.id:
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({'success': False, 'msg': 'نمی‌توانید خودتان را حذف کنید'}, status=400)
         messages.error(request, 'نمی‌توانید خودتان را حذف کنید!')
         return redirect('super_admin_panel')
-    
+
     if target_user.is_superuser and User.objects.filter(is_superuser=True).count() <= 1:
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({'success': False, 'msg': 'نمی‌توانید آخرین سوپرادمین را حذف کنید'}, status=400)
         messages.error(request, 'نمی‌توانید آخرین سوپرادمین را حذف کنید!')
         return redirect('super_admin_panel')
-    
+
     username = target_user.username
-    
+
     user_files = UploadedFile.objects.filter(uploaded_by=target_user)
     for file_obj in user_files:
         if file_obj.file:
@@ -1491,12 +1487,12 @@ def delete_user_view(request, user_id):
             except:
                 pass
         file_obj.delete()
-    
+
     target_user.delete()
-    
+
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return JsonResponse({'success': True, 'msg': f'کاربر {username} با موفقیت حذف شد'})
-    
+
     messages.success(request, f'کاربر {username} با موفقیت حذف شد')
     return redirect('super_admin_panel')
 
@@ -1506,7 +1502,7 @@ def delete_user_modal_view(request, user_id):
     """نمایش مودال تایید حذف کاربر"""
     if not request.user.is_superuser:
         return redirect('dashboard')
-    
+
     target_user = get_object_or_404(User, id=user_id)
     context = {
         'target_user': target_user,
@@ -1519,7 +1515,7 @@ def delete_role_modal_view(request, role_id):
     """نمایش مودال تایید حذف نقش"""
     if not request.user.is_superuser:
         return redirect('dashboard')
-    
+
     role = get_object_or_404(Group, id=role_id)
     context = {
         'role': role,
@@ -1532,27 +1528,27 @@ def bulk_delete_users_view(request):
     """حذف چند کاربر به صورت یکجا (فقط سوپرادمین)"""
     if not request.user.is_superuser:
         return JsonResponse({'success': False, 'msg': 'دسترسی غیرمجاز'}, status=403)
-    
+
     if request.method != 'POST':
         return JsonResponse({'success': False, 'msg': 'متد نامعتبر'}, status=405)
-    
+
     try:
         data = json.loads(request.body)
         user_ids = data.get('user_ids', [])
-        
+
         if not user_ids:
             return JsonResponse({'success': False, 'msg': 'هیچ کاربری انتخاب نشده است'})
-        
+
         if str(request.user.id) in user_ids:
             return JsonResponse({'success': False, 'msg': 'نمی‌توانید خودتان را حذف کنید'})
-        
+
         superadmins = User.objects.filter(is_superuser=True)
         if len(superadmins) <= 1:
             for uid in user_ids:
                 user = User.objects.filter(id=uid, is_superuser=True).first()
                 if user:
                     return JsonResponse({'success': False, 'msg': 'نمی‌توانید آخرین سوپرادمین را حذف کنید'})
-        
+
         deleted_count = 0
         for user_id in user_ids:
             try:
@@ -1570,12 +1566,12 @@ def bulk_delete_users_view(request):
                     deleted_count += 1
             except User.DoesNotExist:
                 continue
-        
+
         return JsonResponse({
-            'success': True, 
+            'success': True,
             'msg': f'{deleted_count} کاربر با موفقیت حذف شدند'
         })
-        
+
     except Exception as e:
         return JsonResponse({'success': False, 'msg': str(e)}, status=400)
 
@@ -1585,20 +1581,20 @@ def bulk_delete_roles_view(request):
     """حذف چند نقش به صورت یکجا (فقط سوپرادمین)"""
     if not request.user.is_superuser:
         return JsonResponse({'success': False, 'msg': 'دسترسی غیرمجاز'}, status=403)
-    
+
     if request.method != 'POST':
         return JsonResponse({'success': False, 'msg': 'متد نامعتبر'}, status=405)
-    
+
     try:
         data = json.loads(request.body)
         role_ids = data.get('role_ids', [])
-        
+
         if not role_ids:
             return JsonResponse({'success': False, 'msg': 'هیچ نقشی انتخاب نشده است'})
-        
+
         protected_roles = ['admin', 'superadmin', 'user']
         deleted_count = 0
-        
+
         for role_id in role_ids:
             try:
                 role = Group.objects.get(id=role_id)
@@ -1607,34 +1603,29 @@ def bulk_delete_roles_view(request):
                     deleted_count += 1
             except Group.DoesNotExist:
                 continue
-        
+
         return JsonResponse({
-            'success': True, 
+            'success': True,
             'msg': f'{deleted_count} نقش با موفقیت حذف شدند'
         })
-        
+
     except Exception as e:
         return JsonResponse({'success': False, 'msg': str(e)}, status=400)
 
 
 # ==================== API نوتیفیکیشن‌ها ====================
 
-# ============================================================
-# ✅ اصلاح شده: تابع get_notifications_api با لاگ بیشتر
-# ============================================================
 @login_required
 def get_notifications_api(request):
     """دریافت نوتیفیکیشن‌های کاربر - فقط برای ادمین‌ها"""
     if not request.user.is_staff:
         return JsonResponse({'notifications': [], 'unread_count': 0, 'total': 0}, status=403)
-    
+
     try:
-        notifications = AINotification.objects.filter(target_users=request.user).order_by('-created_at')
-        
-        print(f"📬 [API] تعداد نوتیفیکیشن‌ها برای {request.user.username}: {notifications.count()}")
-        
+        notifications = AINotification.objects.filter(target_users=request.user)
+
         unread_count = notifications.filter(status='unread').count()
-        
+
         notifications_list = []
         for notif in notifications[:50]:
             file_name = None
@@ -1646,14 +1637,14 @@ def get_notifications_api(request):
                         file_name = str(notif.file)
                 except:
                     file_name = 'فایل نامشخص'
-            
+
             user_name = None
             if notif.user:
                 try:
                     user_name = notif.user.username
                 except:
                     user_name = 'کاربر نامشخص'
-            
+
             notifications_list.append({
                 'id': notif.id,
                 'title': notif.title or 'بدون عنوان',
@@ -1664,19 +1655,15 @@ def get_notifications_api(request):
                 'file_name': file_name,
                 'user_name': user_name
             })
-        
-        print(f"📬 [API] ارسال {len(notifications_list)} نوتیفیکیشن - خوانده نشده: {unread_count}")
-        
+
         return JsonResponse({
             'notifications': notifications_list,
             'unread_count': unread_count,
             'total': notifications.count()
         })
-        
+
     except Exception as e:
-        print(f"❌ Error in get_notifications_api: {e}")
-        import traceback
-        traceback.print_exc()
+        print(f"Error in get_notifications_api: {e}")
         return JsonResponse({
             'notifications': [],
             'unread_count': 0,
@@ -1690,7 +1677,7 @@ def mark_notification_read_api(request, notification_id):
     """علامت‌گذاری نوتیفیکیشن به عنوان خوانده شده"""
     if not request.user.is_staff:
         return JsonResponse({'success': False, 'msg': 'دسترسی غیرمجاز'}, status=403)
-    
+
     try:
         notification = AINotification.objects.get(id=notification_id, target_users=request.user)
         notification.status = 'read'
@@ -1708,16 +1695,16 @@ def mark_all_notifications_read_api(request):
     """علامت‌گذاری همه نوتیفیکیشن‌ها به عنوان خوانده شده"""
     if not request.user.is_staff:
         return JsonResponse({'success': False, 'msg': 'دسترسی غیرمجاز'}, status=403)
-    
+
     try:
         notifications = AINotification.objects.filter(target_users=request.user, status='unread')
         count = notifications.count()
-        
+
         for notif in notifications:
             notif.status = 'read'
             notif.read_at = timezone.now()
             notif.save()
-        
+
         return JsonResponse({'success': True, 'msg': f'{count} نوتیفیکیشن خوانده شد'})
     except Exception as e:
         return JsonResponse({'success': False, 'msg': str(e)}, status=500)
@@ -1728,13 +1715,13 @@ def notifications_panel_view(request):
     """صفحه نمایش نوتیفیکیشن‌ها - فقط برای ادمین‌ها"""
     if not request.user.is_staff:
         return redirect('dashboard')
-    
+
     try:
         notifications = AINotification.objects.filter(target_users=request.user).order_by('-created_at')
         paginator = Paginator(notifications, 20)
         page_number = request.GET.get('page')
         page_obj = paginator.get_page(page_number)
-        
+
         context = {
             'page_obj': page_obj,
             'total_count': notifications.count(),
@@ -1746,22 +1733,17 @@ def notifications_panel_view(request):
         return redirect('dashboard')
 
 
-# ============================================================
-# ✅ اصلاح شده: تابع alerts_count_api
-# ============================================================
 @login_required
 def alerts_count_api(request):
     """API دریافت تعداد هشدارهای در انتظار"""
     if not request.user.is_staff:
         return JsonResponse({'count': 0})
-    
+
     try:
-        from .models import AIThreatAlert
         count = AIThreatAlert.objects.filter(status='pending').count()
-        print(f"📊 [API] تعداد هشدارهای pending: {count}")
         return JsonResponse({'count': count})
     except Exception as e:
-        print(f"❌ Error in alerts_count_api: {e}")
+        print(f"Error in alerts_count_api: {e}")
         return JsonResponse({'count': 0})
 
 
@@ -1772,10 +1754,10 @@ def analyze_file_detail_view(request, file_id):
     """نمایش تحلیل دقیق یک فایل"""
     if not request.user.is_staff:
         return JsonResponse({'success': False, 'msg': 'دسترسی غیرمجاز'}, status=403)
-    
+
     try:
         file_obj = get_object_or_404(UploadedFile, id=file_id, is_deleted=False)
-        
+
         analysis = "تحلیلی برای این فایل ثبت نشده است"
         try:
             alert = AIThreatAlert.objects.filter(file=file_obj).first()
@@ -1783,17 +1765,92 @@ def analyze_file_detail_view(request, file_id):
                 analysis = alert.description
         except:
             pass
-        
+
         context = {
             'file': file_obj,
             'analysis': analysis,
             'user': file_obj.uploaded_by,
         }
         return render(request, 'file_analysis_detail.html', context)
-        
+
     except Exception as e:
         messages.error(request, f'خطا در بارگذاری تحلیل فایل: {str(e)}')
         return redirect('dashboard')
+
+
+# @login_required
+# @csrf_exempt
+# def analyze_file_manual_api(request, file_id):
+#     """تحلیل دستی فایل با AI (درخواست جدید)"""
+#     if not request.user.is_staff:
+#         return JsonResponse({'success': False, 'msg': 'دسترسی غیرمجاز'}, status=403)
+
+#     if request.method != 'POST':
+#         return JsonResponse({'success': False, 'msg': 'متد نامعتبر'}, status=405)
+
+#     try:
+#         file_obj = get_object_or_404(UploadedFile, id=file_id, is_deleted=False)
+
+#         from .services.file_reader import FileReader
+
+#         try:
+#             file_info = FileReader.read_file(file_obj.file)
+#             content = file_info.get('content', '')
+#         except Exception as e:
+#             content = f"خطا در خواندن فایل: {str(e)}"
+
+#         if not llm_service or not llm_service.is_available:
+#             return JsonResponse({
+#                 'success': False,
+#                 'error': 'سرویس AI در دسترس نیست. لطفاً Ollama را راه‌اندازی کنید.'
+#             }, status=503)
+
+#         prompt = f"""
+#         فایل "{file_obj.file.name}" را تحلیل کن و گزارش زیر را بنویس:
+
+#         1. موضوع اصلی فایل چیست؟
+#         2. آیا محتوای مشکوک یا خطرناکی دارد؟ (بله/خیر)
+#         3. چه نوع اطلاعاتی در فایل وجود دارد؟ (شخصی/حساس/عمومی/فنی/مالی)
+#         4. سطح ریسک فایل: (کم/متوسط/بالا/بحرانی)
+#         5. خلاصه محتوا (۲-۳ خط):
+
+#         محتوا:
+#         {content[:3000] if content else 'فایل غیرقابل خواندن است'}
+
+#         پاسخ:
+#         """
+
+#         analysis = llm_service._call_llm_stream(prompt)
+
+#         severity = 'low'
+#         if 'بحرانی' in analysis:
+#             severity = 'critical'
+#         elif 'بالا' in analysis:
+#             severity = 'high'
+#         elif 'متوسط' in analysis:
+#             severity = 'medium'
+
+#         AIThreatAlert.objects.create(
+#             file=file_obj,
+#             threat_type='manual_analysis',
+#             severity=severity,
+#             description=analysis[:500],
+#             recommended_action='review' if severity in ['high', 'critical'] else 'none',
+#             ai_raw_response=analysis,
+#             status='reviewed'
+#         )
+
+#         return JsonResponse({
+#             'success': True,
+#             'analysis': analysis,
+#             'threat_level': severity
+#         })
+
+#     except Exception as e:
+#         return JsonResponse({
+#             'success': False,
+#             'error': str(e)
+#         }, status=500)
 
 
 @login_required
@@ -1802,15 +1859,15 @@ def analyze_file_manual_api(request, file_id):
     """تحلیل دستی فایل با AI - با timeout بیشتر"""
     if not request.user.is_staff:
         return JsonResponse({'success': False, 'msg': 'دسترسی غیرمجاز'}, status=403)
-    
+
     if request.method != 'POST':
         return JsonResponse({'success': False, 'msg': 'متد نامعتبر'}, status=405)
-    
+
     try:
         file_obj = get_object_or_404(UploadedFile, id=file_id, is_deleted=False)
-        
+
         from .services.file_reader import FileReader
-        
+
         # خواندن محتوای فایل
         content = ""
         try:
@@ -1818,13 +1875,13 @@ def analyze_file_manual_api(request, file_id):
             content = file_info.get('content', '')
         except Exception as e:
             content = f"خطا در خواندن فایل: {str(e)}"
-        
+
         if not llm_service or not llm_service.is_available:
             return JsonResponse({
                 'success': False,
                 'error': 'سرویس AI در دسترس نیست. لطفاً Ollama را راه‌اندازی کنید.'
             }, status=503)
-        
+
         # پرامپت کوتاه‌تر برای سرعت بیشتر
         prompt = f"""
         تحلیل فایل "{file_obj.file.name}":
@@ -1838,12 +1895,12 @@ def analyze_file_manual_api(request, file_id):
         3. سطح ریسک: (کم/متوسط/بالا/بحرانی)
         4. توصیه:
         """
-        
+
         print(f"🤖 شروع تحلیل فایل: {file_obj.file.name}")
-        
+
         # ارسال با timeout 120 ثانیه
         analysis = llm_service._call_llm_stream(prompt)
-        
+
         # تشخیص سطح تهدید
         threat_level = 'low'
         analysis_lower = analysis.lower()
@@ -1855,7 +1912,7 @@ def analyze_file_manual_api(request, file_id):
             threat_level = 'medium'
         elif 'مشکوک' in analysis_lower:
             threat_level = 'warning'
-        
+
         # ذخیره نتیجه
         severity_map = {
             'low': 'low',
@@ -1864,7 +1921,7 @@ def analyze_file_manual_api(request, file_id):
             'warning': 'medium',
             'critical': 'critical'
         }
-        
+
         AIThreatAlert.objects.create(
             file=file_obj,
             threat_type='manual_analysis',
@@ -1876,13 +1933,17 @@ def analyze_file_manual_api(request, file_id):
             reviewed_by=request.user,
             reviewed_at=timezone.now()
         )
-        
+
         return JsonResponse({
             'success': True,
             'analysis': analysis,
             'threat_level': threat_level
         })
-        
+
+
+
+
+
     except Exception as e:
         print(f"❌ خطا در تحلیل: {e}")
         import traceback
@@ -1898,13 +1959,13 @@ def action_log_view(request):
     """نمایش لاگ عملیات با تحلیل AI - فقط برای ادمین‌ها"""
     if not request.user.is_staff:
         return redirect('dashboard')
-    
+
     try:
         logs = FileActionLog.objects.all().order_by('-action_time')
         paginator = Paginator(logs, 20)
         page_number = request.GET.get('page')
         page_obj = paginator.get_page(page_number)
-        
+
         context = {
             'page_obj': page_obj,
             'total_logs': logs.count(),
@@ -1920,7 +1981,7 @@ def action_log_detail_api(request, log_id):
     """API دریافت جزئیات یک لاگ عملیات"""
     if not request.user.is_staff:
         return JsonResponse({'success': False, 'msg': 'دسترسی غیرمجاز'}, status=403)
-    
+
     try:
         log = FileActionLog.objects.get(id=log_id)
         return JsonResponse({
@@ -1943,12 +2004,12 @@ def resolve_alert_view(request, alert_id):
     """رسیدگی به هشدار امنیتی"""
     if not request.user.is_staff:
         return JsonResponse({'success': False, 'msg': 'دسترسی غیرمجاز'}, status=403)
-    
+
     alert = get_object_or_404(AIThreatAlert, id=alert_id)
-    
+
     if request.method == 'POST':
         action = request.POST.get('action')
-        
+
         if action == 'block':
             alert.file.is_deleted = True
             alert.file.save()
@@ -1957,12 +2018,14 @@ def resolve_alert_view(request, alert_id):
             alert.status = 'ignored'
         elif action == 'review':
             alert.status = 'reviewed'
-        
+
         alert.reviewed_by = request.user
         alert.reviewed_at = timezone.now()
         alert.save()
-        
+
         messages.success(request, f'هشدار با موفقیت {dict(alert.STATUS_CHOICES).get(alert.status)} شد')
         return redirect('security_alerts')
-    
+
     return render(request, 'resolve_alert.html', {'alert': alert})
+
+

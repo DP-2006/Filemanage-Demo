@@ -408,7 +408,6 @@ class FirewallService:
                     self._create_threat_alert(uploaded_file, result)
                     return result
                 
-                # 3.3 تحلیل با AI
                 if self.llm and self.llm.is_available:
                     ai_result = self._scan_with_ai(content, uploaded_file.file.name)
                     if ai_result.get("is_threat"):
@@ -424,7 +423,6 @@ class FirewallService:
             print(f"⚠️ خطا در اسکن محتوای فایل: {e}")
             result["details"]["error"] = str(e)
         
-        # 4. اگر هیچ تهدیدی پیدا نشد
         result["description"] = "✅ فایل سالم است"
         return result
     
