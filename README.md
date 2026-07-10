@@ -1,14 +1,11 @@
-# simolate-the-Drive
   
-  # 🏪 SAFEDRIVE - Advanced File Management System (SAFA)
-  # better than wen you see!
+  # 🏪 SAFEDRIVE - Advanced File Management System 
   [![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://python.org)
   [![Django](https://img.shields.io/badge/Django-4.2+-green.svg)](https://djangoproject.com)
   [![Bootstrap](https://img.shields.io/badge/Bootstrap-5.3-purple.svg)](https://getbootstrap.com)
-  [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
   [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
   
-  <h3>🚀 A Professional File Management System with Multi-Level Admin Panel</h3>
+  <h3> A Professional File Management System with Multi-Level Admin Panel</h3>
   
   [Features](#-features) • 
   [Quick Start](#-quick-start) • 
@@ -36,14 +33,14 @@
 - File versioning
 - Support for multiple file types (PDF, Video, Images, Documents)
 
-### 👥 **User Management**
+###  User Management
 - User profiles with national code
 - Role assignment and management
 - Advanced filtering and search
 - Bulk user operations
 - Activity logs
 
-### 🎨 **Modern UI/UX**
+### Modern UI/UX
 - Fully responsive RTL design
 - Persian font (Vazirmatn) support
 - Dark/Light mode ready
