@@ -224,7 +224,6 @@ If you encounter any issues or have suggestions:
 
 <div align="center">
 
-**Built with ❤️ for enterprise security and file management**
 
 *An open-source solution for organisations that value security, transparency, and intelligent automation.*
 
